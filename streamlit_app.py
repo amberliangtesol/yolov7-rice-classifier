@@ -19,6 +19,7 @@ import threading
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import av
 import subprocess
+import json
 
 # Page configuration
 st.set_page_config(
@@ -160,6 +161,18 @@ def to_h264(input_path, output_path=None):
     except Exception as e:
         print(f"❌ H.264 轉換出現意外錯誤: {e}")
         return None
+
+def ffprobe_json(path: str) -> dict:
+    """Get detailed video metadata using ffprobe for browser compatibility analysis"""
+    try:
+        out = subprocess.check_output([
+            "ffprobe", "-v", "error", "-print_format", "json",
+            "-show_streams", "-show_format", path
+        ])
+        return json.loads(out.decode("utf-8"))
+    except Exception as e:
+        st.warning(f"ffprobe 失敗：{e}")
+        return {}
 
 class RiceClassifierStreamlit:
     def __init__(self, weights_path='models/best.pt', device='', img_size=640, conf_thres=0.25, iou_thres=0.45):
@@ -838,6 +851,12 @@ def main():
                                     
                                     if h264_path and os.path.exists(h264_path):
                                         st.info("✅ H.264 轉換完成")
+                                        
+                                        # 顯示視頻元數據以診斷瀏覽器兼容性
+                                        meta = ffprobe_json(h264_path)
+                                        if meta.get("streams"):
+                                            st.write("🎛️ Video metadata (關鍵：codec_name/profile/pix_fmt/level)：", meta.get("streams", []))
+                                        
                                         # 3) 用檔案路徑做預覽（比 bytes 穩）
                                         st.video(h264_path)
                                         st.success("✅ 視頻預覽載入成功！")
@@ -853,7 +872,12 @@ def main():
                                             mime="video/mp4"
                                         )
                                     else:
-                                        # H.264 轉換失敗，直接提供下載按鈕
+                                        # H.264 轉換失敗，顯示原始視頻的元數據診斷信息
+                                        meta = ffprobe_json(output_video_path)
+                                        if meta.get("streams"):
+                                            st.write("🎛️ 原始視頻 metadata (診斷為何轉換失敗)：", meta.get("streams", []))
+                                        
+                                        # 直接提供下載按鈕
                                         with open(output_video_path, 'rb') as f:
                                             original_bytes = f.read()
                                         
