@@ -844,22 +844,22 @@ def main():
                                 # 1) 檢查原始偵測輸出是否完成
                                 if output_video_path and os.path.exists(output_video_path):
                                     file_size_mb = os.path.getsize(output_video_path) / (1024 * 1024)
-                                    st.info(f"✅ 偵測完成 (檔案大小: {file_size_mb:.1f}MB)")
+                                    # Video processing completed
                                     
                                     # 2) 轉換 H.264 以確保 HTML5 可播
                                     h264_path = to_h264(output_video_path)
                                     
                                     if h264_path and os.path.exists(h264_path):
-                                        st.info("✅ H.264 轉換完成")
+                                        # H.264 conversion completed
                                         
                                         # 顯示視頻元數據以診斷瀏覽器兼容性
                                         meta = ffprobe_json(h264_path)
                                         if meta.get("streams"):
-                                            st.write("🎛️ Video metadata (關鍵：codec_name/profile/pix_fmt/level)：", meta.get("streams", []))
+                                            # Video metadata available for debugging
                                         
                                         # 3) 用檔案路徑做預覽（比 bytes 穩）
                                         st.video(h264_path)
-                                        st.success("✅ 視頻預覽載入成功！")
+                                        # Video preview loaded successfully
                                         
                                         # 4) 下載按鈕用轉好的 H.264
                                         with open(h264_path, 'rb') as f:
