@@ -65,32 +65,100 @@ classifier = None
 
 # H.264 conversion function for better video compatibility
 def to_h264(input_path, output_path=None):
-    """Convert video to H.264 format for better browser compatibility"""
+    """Convert video to H.264 format for better browser compatibility with enhanced error handling"""
     if output_path is None:
         base_name = os.path.splitext(input_path)[0]
         output_path = f"{base_name}_h264.mp4"
     
     try:
         # Check if ffmpeg is available
-        subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+        ffmpeg_check = subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+        print(f"✅ ffmpeg available: {ffmpeg_check.returncode == 0}")
         
-        # Convert to H.264 with web-optimized settings
+        # Get video info first to check dimensions
+        probe_cmd = [
+            'ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_streams', input_path
+        ]
+        
+        try:
+            probe_result = subprocess.run(probe_cmd, capture_output=True, check=True, text=True)
+            import json
+            video_info = json.loads(probe_result.stdout)
+            
+            # Find video stream
+            video_stream = None
+            for stream in video_info.get('streams', []):
+                if stream.get('codec_type') == 'video':
+                    video_stream = stream
+                    break
+            
+            if video_stream:
+                width = int(video_stream.get('width', 0))
+                height = int(video_stream.get('height', 0))
+                print(f"📐 原始尺寸: {width}x{height}")
+                
+                # Check if dimensions are odd (H.264 requirement: must be even)
+                if width % 2 != 0 or height % 2 != 0:
+                    # Force even dimensions
+                    width = width + (width % 2)
+                    height = height + (height % 2)
+                    print(f"🔧 調整為偶數尺寸: {width}x{height}")
+                    scale_filter = f"scale={width}:{height}"
+                else:
+                    scale_filter = None
+                    print("✅ 尺寸已為偶數，無需調整")
+                    
+        except Exception as probe_error:
+            print(f"⚠️ 無法獲取視頻信息，使用默認設置: {probe_error}")
+            scale_filter = "scale=trunc(iw/2)*2:trunc(ih/2)*2"  # Force even dimensions
+        
+        # Build ffmpeg command with enhanced settings
         cmd = [
             'ffmpeg', '-y',  # -y to overwrite output file
             '-i', input_path,
             '-c:v', 'libx264',  # H.264 codec
             '-preset', 'fast',  # Fast encoding preset
-            '-crf', '23',  # Good quality setting
+            '-crf', '26',  # Higher CRF (lower quality) to reduce file size
+            '-maxrate', '2M',  # Limit maximum bitrate
+            '-bufsize', '4M',  # Buffer size
             '-movflags', '+faststart',  # Optimize for web streaming
             '-pix_fmt', 'yuv420p',  # Ensure compatibility
-            output_path
         ]
         
-        subprocess.run(cmd, capture_output=True, check=True)
-        return output_path
+        # Add scale filter if needed (force even dimensions)
+        if scale_filter:
+            cmd.extend(['-vf', scale_filter])
+        else:
+            # Ensure even dimensions even if probe failed
+            cmd.extend(['-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'])
+            
+        cmd.append(output_path)
         
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # ffmpeg not available or conversion failed
+        print(f"🔄 執行 ffmpeg 命令: {' '.join(cmd[:8])}...")
+        
+        # Run conversion with detailed error capture
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print("✅ H.264 轉換成功")
+            return output_path
+        else:
+            print(f"❌ ffmpeg 轉換失敗 (返回碼: {result.returncode})")
+            print(f"📋 stderr: {result.stderr[:500]}...")  # Show first 500 chars of error
+            print(f"📋 stdout: {result.stdout[:500]}...")
+            return None
+        
+    except subprocess.CalledProcessError as e:
+        print(f"❌ ffmpeg 命令執行失敗: {e}")
+        print(f"📋 返回碼: {e.returncode}")
+        if e.stderr:
+            print(f"📋 錯誤輸出: {e.stderr.decode()[:500]}")
+        return None
+    except FileNotFoundError:
+        print("❌ ffmpeg 未安裝或無法找到")
+        return None
+    except Exception as e:
+        print(f"❌ H.264 轉換出現意外錯誤: {e}")
         return None
 
 class RiceClassifierStreamlit:
@@ -203,6 +271,18 @@ class RiceClassifierStreamlit:
             
             print(f"Video properties: {total_frames} frames, {fps} FPS, {width}x{height}")
             
+            # Ensure even dimensions for VideoWriter compatibility (especially for H.264)
+            original_width, original_height = width, height
+            if width % 2 != 0:
+                width = width + 1
+                print(f"🔧 Adjusted width from {original_width} to {width} (must be even)")
+            if height % 2 != 0:
+                height = height + 1
+                print(f"🔧 Adjusted height from {original_height} to {height} (must be even)")
+            
+            if width != original_width or height != original_height:
+                print(f"📐 VideoWriter will use dimensions: {width}x{height} (adjusted from {original_width}x{original_height})")
+            
             out = None
             if output_path:
                 # Try different codecs optimized for cloud deployment and browser compatibility
@@ -221,16 +301,17 @@ class RiceClassifierStreamlit:
                             current_output_path = output_path.rsplit('.', 1)[0] + ext
                         
                         fourcc = cv2.VideoWriter_fourcc(*codec)
+                        # Use the adjusted even dimensions
                         out = cv2.VideoWriter(current_output_path, fourcc, fps, (width, height))
                         if out.isOpened():
-                            print(f"Successfully created video writer with codec: {codec}, file: {current_output_path}")
+                            print(f"✅ Successfully created video writer with codec: {codec}, dimensions: {width}x{height}, file: {current_output_path}")
                             # Update output_path to the successful one
                             output_path = current_output_path
                             break
                         else:
                             out.release()
                     except Exception as codec_error:
-                        print(f"Failed to create video writer with codec {codec}: {codec_error}")
+                        print(f"❌ Failed to create video writer with codec {codec}: {codec_error}")
                         continue
                 
                 if out is None or not out.isOpened():
@@ -261,7 +342,18 @@ class RiceClassifierStreamlit:
                     
                     # Write frame if output specified
                     if out is not None:
-                        out.write(cv2.cvtColor(result_frame, cv2.COLOR_RGB2BGR))
+                        # Convert RGB back to BGR for video output
+                        bgr_frame = cv2.cvtColor(result_frame, cv2.COLOR_RGB2BGR)
+                        
+                        # Ensure frame dimensions match VideoWriter dimensions
+                        frame_h, frame_w = bgr_frame.shape[:2]
+                        if frame_w != width or frame_h != height:
+                            # Resize frame to match VideoWriter dimensions
+                            bgr_frame = cv2.resize(bgr_frame, (width, height), interpolation=cv2.INTER_LINEAR)
+                            if frame_count == 0:  # Log only once
+                                print(f"🔧 Resizing frames from {frame_w}x{frame_h} to {width}x{height} for VideoWriter consistency")
+                        
+                        out.write(bgr_frame)
                     
                     frame_count += 1
                     
@@ -528,27 +620,31 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
                 status_placeholder.warning(f"⚠️ Progress callback not supported, falling back... ({str(e)})")
             detections, status = classifier.process_video(temp_video_path, output_path=output_video_path)
         
-        # Read processed video for display
+        # Check processed video file (but don't read bytes to memory yet)
         processed_video_bytes = None
         if output_video_path and os.path.exists(output_video_path):
             try:
                 if status_placeholder:
-                    status_placeholder.info("📤 準備視頻預覽...")
+                    status_placeholder.info("📤 視頻檔案準備完成...")
                 
                 # Check file size
                 file_size = os.path.getsize(output_video_path)
                 print(f"Output video file size: {file_size} bytes")
                 
                 if file_size > 0:
-                    with open(output_video_path, 'rb') as f:
-                        processed_video_bytes = f.read()
-                    print(f"Successfully read {len(processed_video_bytes)} bytes for video preview")
+                    # Don't read the entire file into memory - just verify it exists and has content
+                    # The video preview will use file path directly
+                    print(f"Output video ready for preview: {output_video_path}")
+                    if status_placeholder:
+                        status_placeholder.success(f"✅ 視頻處理完成 (檔案大小: {file_size/1024/1024:.1f}MB)")
                 else:
                     print("Output video file is empty")
+                    if status_placeholder:
+                        status_placeholder.error("❌ 輸出視頻檔案為空")
             except Exception as e:
-                print(f"Error reading processed video for preview: {e}")
+                print(f"Error checking processed video: {e}")
                 if status_placeholder:
-                    status_placeholder.warning(f"⚠️ 視頻預覽準備失敗: {e}")
+                    status_placeholder.warning(f"⚠️ 視頻檔案檢查失敗: {e}")
         
         return detections, status, processed_video_bytes, output_video_path
         
@@ -557,16 +653,19 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
         return None, f"Error processing video: {str(e)}", None, None
     
     finally:
-        # Clean up temp files - but keep processed video for download if it was successfully created
+        # Clean up temp input files only - KEEP processed output video for preview/download
         if temp_video_path and os.path.exists(temp_video_path):
             try:
                 os.unlink(temp_video_path)
-                print(f"Cleaned up temp input video: {temp_video_path}")
+                print(f"✅ Cleaned up temp input video: {temp_video_path}")
             except Exception as e:
-                print(f"Failed to cleanup temp input video: {e}")
+                print(f"⚠️ Failed to cleanup temp input video: {e}")
         
-        # Only clean up output video after a delay to allow preview/download
-        # Note: In production, you might want to implement a proper cleanup mechanism
+        # DO NOT clean up output_video_path here - let Streamlit handle it
+        # The processed video and H.264 converted video will be kept for preview
+        # Streamlit will clean up temp files when the session ends
+        if output_video_path:
+            print(f"📁 Keeping processed video for preview: {output_video_path}")
 
 def main():
     """Main Streamlit application"""
