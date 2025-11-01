@@ -16,7 +16,7 @@ import cv2
 import torch
 import time
 import threading
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import av
 
 # Page configuration
@@ -779,66 +779,25 @@ def main():
             if classifier_obj is not None:
                 video_transformer.set_classifier(classifier_obj, camera_conf, camera_iou)
             
-            # Advanced WebRTC configuration for cloud deployment
-            ice_servers = [
-                # Google STUN servers (primary)
-                {"urls": ["stun:stun.l.google.com:19302"]},
-                {"urls": ["stun:stun1.l.google.com:19302"]},
-                {"urls": ["stun:stun2.l.google.com:19302"]},
-                {"urls": ["stun:stun3.l.google.com:19302"]},
-                {"urls": ["stun:stun4.l.google.com:19302"]},
-                
-                # Alternative STUN servers (backup)
-                {"urls": ["stun:stun.services.mozilla.com"]},
-                {"urls": ["stun:stun.stunprotocol.org:3478"]},
-                {"urls": ["stun:stun.cloudflare.com:3478"]},
-                {"urls": ["stun:stun.nextcloud.com:443"]},
-                
-                # Free TURN servers for cloud deployment (UDP + TCP)
-                {
-                    "urls": [
-                        "turn:openrelay.metered.ca:80",
-                        "turn:openrelay.metered.ca:80?transport=tcp",
-                        "turn:openrelay.metered.ca:443",
-                        "turn:openrelay.metered.ca:443?transport=tcp"
-                    ],
-                    "username": "openrelayproject",
-                    "credential": "openrelayproject"
-                },
-                
-                # Additional free TURN servers for redundancy
-                {
-                    "urls": [
-                        "turn:global.relay.metered.ca:80",
-                        "turn:global.relay.metered.ca:80?transport=tcp",
-                        "turn:global.relay.metered.ca:443",
-                        "turn:global.relay.metered.ca:443?transport=tcp"
-                    ],
-                    "username": "a4c50bcc8d6ecfdddbaf05e1bb9901ca",
-                    "credential": "1Y4hnpgB6s6VrE8Q"
-                },
-                
-                # Backup TURN servers 
-                {
-                    "urls": [
-                        "turn:relay.backups.cz",
-                        "turn:relay.backups.cz:443",
-                        "turns:relay.backups.cz:443"
-                    ],
-                    "username": "webrtc",
-                    "credential": "webrtc"
-                }
-            ]
+            # Simplified WebRTC configuration for cloud deployment
+            # Using camelCase and minimal servers for faster connection
+            rtc_config = {
+                "iceServers": [
+                    # Single reliable STUN server
+                    {"urls": "stun:stun.l.google.com:19302"},
+                    # Single TURN server for cloud NAT traversal
+                    {
+                        "urls": "turn:openrelay.metered.ca:80",
+                        "username": "openrelayproject",
+                        "credential": "openrelayproject"
+                    }
+                ]
+            }
             
             webrtc_ctx = webrtc_streamer(
                 key="rice-detection",
                 video_processor_factory=lambda: video_transformer,
-                rtc_configuration=RTCConfiguration(
-                    ice_servers=ice_servers,
-                    ice_candidate_pool_size=20,
-                    # For debugging cloud issues, uncomment next line to force TURN
-                    # ice_transport_policy="relay"
-                ),
+                rtc_configuration=rtc_config,
                 media_stream_constraints={
                     "video": {
                         "width": {"min": 640, "ideal": 1280, "max": 1920},
