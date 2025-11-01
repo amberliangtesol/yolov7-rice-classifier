@@ -174,20 +174,27 @@ class RiceClassifierStreamlit:
             
             out = None
             if output_path:
-                # Try different codecs for better browser compatibility
+                # Try different codecs optimized for cloud deployment and browser compatibility
                 codecs_to_try = [
-                    'avc1',  # H.264 - best browser support
-                    'H264',  # Alternative H.264
-                    'mp4v',  # MPEG-4 fallback
-                    'XVID'   # Xvid fallback
+                    ('mp4v', '.mp4'),  # MPEG-4 - most widely supported
+                    ('XVID', '.avi'),  # Xvid - good fallback
+                    ('avc1', '.mp4'),  # H.264 - best quality but may not be available in cloud
+                    ('H264', '.mp4'),  # Alternative H.264
                 ]
                 
-                for codec in codecs_to_try:
+                for codec, ext in codecs_to_try:
                     try:
+                        # Adjust output path extension based on codec
+                        current_output_path = output_path
+                        if not output_path.endswith(ext):
+                            current_output_path = output_path.rsplit('.', 1)[0] + ext
+                        
                         fourcc = cv2.VideoWriter_fourcc(*codec)
-                        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                        out = cv2.VideoWriter(current_output_path, fourcc, fps, (width, height))
                         if out.isOpened():
-                            print(f"Successfully created video writer with codec: {codec}")
+                            print(f"Successfully created video writer with codec: {codec}, file: {current_output_path}")
+                            # Update output_path to the successful one
+                            output_path = current_output_path
                             break
                         else:
                             out.release()
@@ -689,16 +696,27 @@ def main():
                         with col2:
                             st.markdown("**🎯 Detection Results Video**")
                             try:
-                                st.video(processed_video_bytes, format="video/mp4")
+                                # Try different approaches for video display
+                                # First try without specifying format (let Streamlit auto-detect)
+                                st.video(processed_video_bytes)
                             except Exception as video_error:
-                                st.error(f"視頻預覽錯誤: {video_error}")
-                                st.info("視頻處理成功，但預覽失敗。請使用下載按鈕獲取處理後的視頻。")
+                                try:
+                                    # Fallback: Try with explicit format
+                                    st.video(processed_video_bytes, format="video/mp4")
+                                except Exception as fallback_error:
+                                    st.error(f"⚠️ 視頻預覽暫不可用")
+                                    st.info("💡 視頻處理已完成！雖然預覽功能在此環境中受限，但您可以下載視頻檔案查看完整結果。")
+                                    st.caption(f"技術細節: {video_error}")
                             
-                            # Download button for processed video
+                            # Download button for processed video - always available
+                            file_name = "rice_detection_video.mp4"
+                            # Note: output_video_path is not available in this scope, 
+                            # but the file format is determined by the codec used
+                            
                             st.download_button(
                                 label="📥 Download Processed Video",
                                 data=processed_video_bytes,
-                                file_name="rice_detection_video.mp4",
+                                file_name=file_name,
                                 mime="video/mp4"
                             )
                     else:
