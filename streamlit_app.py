@@ -695,73 +695,106 @@ def main():
                         
                         with col2:
                             st.markdown("**🎯 Detection Results Video**")
-                            try:
-                                # Enhanced video display with multiple fallback strategies for cloud deployment
+                            
+                            # Check if running on Streamlit Cloud (cloud environments have limited video support)
+                            import os
+                            is_cloud_deployment = (
+                                os.getenv("STREAMLIT_SHARING_MODE") == "sharing" or 
+                                "streamlit.app" in os.getenv("HOST", "") or
+                                "streamlitapp.com" in os.getenv("HOST", "") or
+                                ".streamlit.app" in str(os.getenv("HOSTNAME", ""))
+                            )
+                            
+                            if is_cloud_deployment:
+                                st.info("🌐 雲端環境檢測 - 使用增強型視頻播放器")
                                 
-                                # Strategy 1: Direct video display (works locally)
-                                st.video(processed_video_bytes, start_time=0)
-                                
-                            except Exception as video_error:
+                            video_displayed = False
+                            
+                            # Strategy 1: Try direct video display first (works locally and some cloud environments)
+                            if not is_cloud_deployment:
                                 try:
-                                    # Strategy 2: Explicit MP4 format with start_time
-                                    st.video(processed_video_bytes, format="video/mp4", start_time=0)
+                                    st.video(processed_video_bytes, start_time=0)
+                                    video_displayed = True
+                                    st.success("✅ 使用標準視頻播放器")
+                                except Exception as video_error:
+                                    st.warning(f"⚠️ 標準播放器失敗: {str(video_error)[:100]}")
+                            
+                            # Strategy 2: For cloud environments, try HTML5 video player first
+                            if not video_displayed:
+                                try:
+                                    import base64
+                                    # Check video size before base64 encoding
+                                    video_size_mb = len(processed_video_bytes) / (1024 * 1024)
                                     
-                                except Exception as fallback_error:
-                                    try:
-                                        # Strategy 3: Create a temporary file for cloud compatibility
-                                        import tempfile
-                                        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-                                            tmp_file.write(processed_video_bytes)
-                                            tmp_file.flush()
-                                            st.video(tmp_file.name)
-                                            
-                                    except Exception as temp_error:
-                                        # Strategy 4: Use base64 data URL (last resort)
-                                        try:
-                                            import base64
-                                            # Check video size before base64 encoding (limit to 50MB for browser compatibility)
-                                            video_size_mb = len(processed_video_bytes) / (1024 * 1024)
-                                            
-                                            if video_size_mb < 50:
-                                                b64_video = base64.b64encode(processed_video_bytes).decode()
-                                                video_html = f'''
-                                                <div style="text-align: center;">
-                                                    <video width="100%" height="400" controls muted playsinline webkit-playsinline>
-                                                        <source src="data:video/mp4;base64,{b64_video}" type="video/mp4">
-                                                        <source src="data:video/mp4;base64,{b64_video}" type="video/webm">
-                                                        Your browser does not support HTML5 video.
-                                                    </video>
-                                                    <p style="font-size: 12px; color: #666;">
-                                                        ✅ 使用HTML5視頻播放器 (檔案大小: {video_size_mb:.1f}MB)
-                                                    </p>
-                                                </div>
-                                                '''
-                                                st.markdown(video_html, unsafe_allow_html=True)
-                                                st.success("✅ 視頻預覽成功載入！")
-                                            else:
-                                                st.warning(f"⚠️ 視頻檔案太大 ({video_size_mb:.1f}MB) 無法在瀏覽器中預覽")
-                                                st.info("💡 請下載視頻檔案查看檢測結果")
-                                            
-                                        except Exception as final_error:
-                                            # Final fallback: Show error with helpful information
-                                            st.error("⚠️ 視頻預覽在此雲端環境中暫不可用")
-                                            st.info("💡 **視頻處理成功完成！** 雖然雲端預覽功能受限，但您可以下載視頻檔案查看完整檢測結果。")
-                                            
-                                            # Show technical details in expander
-                                            with st.expander("🔧 技術細節 (開發者資訊)"):
-                                                st.write("**錯誤資訊:**")
-                                                st.code(f"Primary error: {video_error}")
-                                                st.code(f"Fallback error: {fallback_error}")
-                                                st.code(f"Temp file error: {temp_error}")
-                                                st.code(f"Final error: {final_error}")
-                                                
-                                                st.write("**可能原因:**")
-                                                st.write("- 雲端環境視頻編碼限制")
-                                                st.write("- 瀏覽器安全策略")
-                                                st.write("- MIME類型不匹配")
-                                                st.write("- 檔案大小限制")
-                                            
-                                            st.success("✅ **解決方案**: 請下載處理後的視頻檔案，檢測結果完全正常！")
+                                    if video_size_mb < 25:  # Reduced limit for cloud compatibility
+                                        st.info(f"🎬 使用HTML5播放器載入視頻 (大小: {video_size_mb:.1f}MB)")
+                                        b64_video = base64.b64encode(processed_video_bytes).decode()
+                                        
+                                        # Enhanced HTML5 video player for cloud deployment
+                                        video_html = f'''
+                                        <div style="text-align: center; margin: 10px 0;">
+                                            <video 
+                                                width="100%" 
+                                                height="400" 
+                                                controls 
+                                                muted 
+                                                playsinline 
+                                                webkit-playsinline
+                                                style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                                                onloadstart="console.log('Video loading started')"
+                                                onloadeddata="console.log('Video data loaded')"
+                                                onerror="console.error('Video error:', this.error)"
+                                            >
+                                                <source src="data:video/mp4;base64,{b64_video}" type="video/mp4">
+                                                <p style="padding: 20px; background: #f0f0f0; border-radius: 8px;">
+                                                    您的瀏覽器不支援HTML5視頻播放。請嘗試使用Chrome、Firefox或Safari瀏覽器。
+                                                </p>
+                                            </video>
+                                            <p style="font-size: 14px; color: #666; margin-top: 8px;">
+                                                ✅ HTML5視頻播放器 | 檔案大小: {video_size_mb:.1f}MB
+                                            </p>
+                                        </div>
+                                        '''
+                                        st.markdown(video_html, unsafe_allow_html=True)
+                                        video_displayed = True
+                                        st.success("✅ 視頻預覽載入成功！")
+                                        
+                                    else:
+                                        st.warning(f"⚠️ 視頻檔案過大 ({video_size_mb:.1f}MB) - 雲端預覽限制為25MB")
+                                        
+                                except Exception as html5_error:
+                                    st.error(f"⚠️ HTML5播放器載入失敗: {str(html5_error)[:100]}")
+                            
+                            # Strategy 3: Traditional Streamlit video (fallback)
+                            if not video_displayed:
+                                try:
+                                    st.info("🔄 嘗試標準視頻播放器...")
+                                    st.video(processed_video_bytes, format="video/mp4", start_time=0)
+                                    video_displayed = True
+                                    st.success("✅ 使用標準播放器成功！")
+                                    
+                                except Exception as standard_error:
+                                    st.warning(f"⚠️ 標準播放器也失敗: {str(standard_error)[:100]}")
+                            
+                            # Strategy 4: Final fallback with helpful message
+                            if not video_displayed:
+                                st.error("⚠️ 雲端環境視頻預覽功能受限")
+                                st.info("💡 **視頻處理完成！** 檢測結果已正確生成，請使用下載按鈕獲取完整視頻。")
+                                
+                                # Show environment info for debugging
+                                with st.expander("🔧 調試信息"):
+                                    st.write("**環境檢測:**")
+                                    st.write(f"- Cloud deployment: {is_cloud_deployment}")
+                                    st.write(f"- Video size: {len(processed_video_bytes) / (1024*1024):.1f}MB")
+                                    st.write(f"- Host: {os.getenv('HOST', 'unknown')}")
+                                    st.write(f"- Hostname: {os.getenv('HOSTNAME', 'unknown')}")
+                                    
+                                    st.write("**建議解決方案:**")
+                                    st.write("1. 📥 下載視頻檔案查看完整結果")
+                                    st.write("2. 🖥️ 在本地環境運行可正常預覽")
+                                    st.write("3. 📱 使用現代瀏覽器（Chrome/Firefox/Safari）")
+                                
+                                st.success("✅ **重要**: 檢測功能完全正常，僅預覽功能受雲端限制！")
                             
                             # Download button for processed video - always available
                             file_name = "rice_detection_video.mp4"
