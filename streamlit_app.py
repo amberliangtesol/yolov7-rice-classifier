@@ -614,33 +614,65 @@ def main():
             if classifier_obj is not None:
                 video_transformer.set_classifier(classifier_obj, camera_conf, camera_iou)
             
+            # Advanced WebRTC configuration for cloud deployment
+            ice_servers = [
+                # Google STUN servers (primary)
+                {"urls": ["stun:stun.l.google.com:19302"]},
+                {"urls": ["stun:stun1.l.google.com:19302"]},
+                {"urls": ["stun:stun2.l.google.com:19302"]},
+                {"urls": ["stun:stun3.l.google.com:19302"]},
+                {"urls": ["stun:stun4.l.google.com:19302"]},
+                
+                # Alternative STUN servers (backup)
+                {"urls": ["stun:stun.services.mozilla.com"]},
+                {"urls": ["stun:stun.stunprotocol.org:3478"]},
+                {"urls": ["stun:stun.cloudflare.com:3478"]},
+                {"urls": ["stun:stun.nextcloud.com:443"]},
+                
+                # Free TURN servers for cloud deployment (UDP + TCP)
+                {
+                    "urls": [
+                        "turn:openrelay.metered.ca:80",
+                        "turn:openrelay.metered.ca:80?transport=tcp",
+                        "turn:openrelay.metered.ca:443",
+                        "turn:openrelay.metered.ca:443?transport=tcp"
+                    ],
+                    "username": "openrelayproject",
+                    "credential": "openrelayproject"
+                },
+                
+                # Additional free TURN servers for redundancy
+                {
+                    "urls": [
+                        "turn:global.relay.metered.ca:80",
+                        "turn:global.relay.metered.ca:80?transport=tcp",
+                        "turn:global.relay.metered.ca:443",
+                        "turn:global.relay.metered.ca:443?transport=tcp"
+                    ],
+                    "username": "a4c50bcc8d6ecfdddbaf05e1bb9901ca",
+                    "credential": "1Y4hnpgB6s6VrE8Q"
+                },
+                
+                # Backup TURN servers 
+                {
+                    "urls": [
+                        "turn:relay.backups.cz",
+                        "turn:relay.backups.cz:443",
+                        "turns:relay.backups.cz:443"
+                    ],
+                    "username": "webrtc",
+                    "credential": "webrtc"
+                }
+            ]
+            
             webrtc_ctx = webrtc_streamer(
                 key="rice-detection",
                 video_processor_factory=lambda: video_transformer,
                 rtc_configuration=RTCConfiguration(
-                    ice_servers=[
-                        # Google STUN servers
-                        {"urls": ["stun:stun.l.google.com:19302"]},
-                        {"urls": ["stun:stun1.l.google.com:19302"]},
-                        {"urls": ["stun:stun2.l.google.com:19302"]},
-                        {"urls": ["stun:stun3.l.google.com:19302"]},
-                        {"urls": ["stun:stun4.l.google.com:19302"]},
-                        # Alternative STUN servers
-                        {"urls": ["stun:stun.services.mozilla.com"]},
-                        {"urls": ["stun:stun.stunprotocol.org:3478"]},
-                        # Public TURN servers (for difficult networks)
-                        {
-                            "urls": ["turn:openrelay.metered.ca:80"],
-                            "username": "openrelayproject",
-                            "credential": "openrelayproject"
-                        },
-                        {
-                            "urls": ["turn:openrelay.metered.ca:443"],
-                            "username": "openrelayproject", 
-                            "credential": "openrelayproject"
-                        }
-                    ],
-                    ice_candidate_pool_size=10
+                    ice_servers=ice_servers,
+                    ice_candidate_pool_size=20,
+                    # For debugging cloud issues, uncomment next line to force TURN
+                    # ice_transport_policy="relay"
                 ),
                 media_stream_constraints={
                     "video": {
@@ -669,22 +701,42 @@ def main():
             4. Adjust confidence/IoU thresholds as needed
             5. Click "STOP" when finished
             
-            **🔧 Connection Troubleshooting:**
-            - Use **Chrome** or **Firefox** browser
+            **🔧 Connection Troubleshooting (雲端部署專用):**
+            - 如果顯示 "Connection is taking longer than expected" → 正常現象，雲端環境需要TURN服務器
+            - Use **Chrome** or **Firefox** browser (必須HTTPS環境)
             - Ensure camera permission is granted
+            - 公司/學校網路可能會封鎖：嘗試用手機4G測試
             - Try refreshing the page if connection fails
-            - Check if other apps are using the camera
-            - On mobile: try switching between front/back camera
+            - **Cloud deployment**: 已自動配置多個免費TURN服務器
             """)
             
-            # Add connection help
-            with st.expander("🛠️ Advanced Connection Settings"):
+            # Enhanced connection diagnostics
+            with st.expander("🛠️ Advanced Connection Settings & Diagnostics"):
                 st.markdown("""
-                **Current STUN/TURN Servers:**
-                - Google STUN: stun.l.google.com:19302 (+ 4 backup)
+                **✅ Enhanced Cloud-Ready STUN/TURN Configuration:**
+                
+                **STUN Servers (NAT discovery):**
+                - Google STUN: stun.l.google.com:19302 (+ 4 backup servers)
                 - Mozilla STUN: stun.services.mozilla.com
-                - Standard STUN: stun.stunprotocol.org:3478
-                - Public TURN: openrelay.metered.ca (for difficult networks)
+                - Cloudflare STUN: stun.cloudflare.com:3478
+                - NextCloud STUN: stun.nextcloud.com:443
+                
+                **TURN Servers (Relay for cloud deployment):**
+                - 🌐 Metered.ca: openrelay.metered.ca (UDP/TCP 80, 443)
+                - 🌐 Global Relay: global.relay.metered.ca (UDP/TCP 80, 443)
+                - 🌐 Backup Relay: relay.backups.cz (UDP/TCP 443)
+                
+                **🔧 Debugging Steps:**
+                1. **Open Browser DevTools** (F12) → Console tab
+                2. Look for ICE connection state messages
+                3. If you see "ICE failed" or "ICE closed" → TURN server issue
+                4. **For developers**: Uncomment `ice_transport_policy="relay"` to force TURN
+                
+                **📊 Connection Status Meanings:**
+                - 🟢 **Connected**: WebRTC working perfectly
+                - 🔄 **Signalling**: Negotiating connection (normal for cloud)
+                - ⚠️ **Not connected**: Click START or check permissions
+                - ❌ **Failed**: Check network/firewall settings
                 
                 **Video Quality Settings:**
                 - Resolution: 640x480 to 1920x1080
