@@ -856,6 +856,7 @@ def main():
                                         meta = ffprobe_json(h264_path)
                                         if meta.get("streams"):
                                             # Video metadata available for debugging
+                                            pass
                                         
                                         # 3) 用檔案路徑做預覽（比 bytes 穩）
                                         st.video(h264_path)
