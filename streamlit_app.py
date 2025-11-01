@@ -696,17 +696,72 @@ def main():
                         with col2:
                             st.markdown("**🎯 Detection Results Video**")
                             try:
-                                # Try different approaches for video display
-                                # First try without specifying format (let Streamlit auto-detect)
-                                st.video(processed_video_bytes)
+                                # Enhanced video display with multiple fallback strategies for cloud deployment
+                                
+                                # Strategy 1: Direct video display (works locally)
+                                st.video(processed_video_bytes, start_time=0)
+                                
                             except Exception as video_error:
                                 try:
-                                    # Fallback: Try with explicit format
-                                    st.video(processed_video_bytes, format="video/mp4")
+                                    # Strategy 2: Explicit MP4 format with start_time
+                                    st.video(processed_video_bytes, format="video/mp4", start_time=0)
+                                    
                                 except Exception as fallback_error:
-                                    st.error(f"⚠️ 視頻預覽暫不可用")
-                                    st.info("💡 視頻處理已完成！雖然預覽功能在此環境中受限，但您可以下載視頻檔案查看完整結果。")
-                                    st.caption(f"技術細節: {video_error}")
+                                    try:
+                                        # Strategy 3: Create a temporary file for cloud compatibility
+                                        import tempfile
+                                        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+                                            tmp_file.write(processed_video_bytes)
+                                            tmp_file.flush()
+                                            st.video(tmp_file.name)
+                                            
+                                    except Exception as temp_error:
+                                        # Strategy 4: Use base64 data URL (last resort)
+                                        try:
+                                            import base64
+                                            # Check video size before base64 encoding (limit to 50MB for browser compatibility)
+                                            video_size_mb = len(processed_video_bytes) / (1024 * 1024)
+                                            
+                                            if video_size_mb < 50:
+                                                b64_video = base64.b64encode(processed_video_bytes).decode()
+                                                video_html = f'''
+                                                <div style="text-align: center;">
+                                                    <video width="100%" height="400" controls muted playsinline webkit-playsinline>
+                                                        <source src="data:video/mp4;base64,{b64_video}" type="video/mp4">
+                                                        <source src="data:video/mp4;base64,{b64_video}" type="video/webm">
+                                                        Your browser does not support HTML5 video.
+                                                    </video>
+                                                    <p style="font-size: 12px; color: #666;">
+                                                        ✅ 使用HTML5視頻播放器 (檔案大小: {video_size_mb:.1f}MB)
+                                                    </p>
+                                                </div>
+                                                '''
+                                                st.markdown(video_html, unsafe_allow_html=True)
+                                                st.success("✅ 視頻預覽成功載入！")
+                                            else:
+                                                st.warning(f"⚠️ 視頻檔案太大 ({video_size_mb:.1f}MB) 無法在瀏覽器中預覽")
+                                                st.info("💡 請下載視頻檔案查看檢測結果")
+                                            
+                                        except Exception as final_error:
+                                            # Final fallback: Show error with helpful information
+                                            st.error("⚠️ 視頻預覽在此雲端環境中暫不可用")
+                                            st.info("💡 **視頻處理成功完成！** 雖然雲端預覽功能受限，但您可以下載視頻檔案查看完整檢測結果。")
+                                            
+                                            # Show technical details in expander
+                                            with st.expander("🔧 技術細節 (開發者資訊)"):
+                                                st.write("**錯誤資訊:**")
+                                                st.code(f"Primary error: {video_error}")
+                                                st.code(f"Fallback error: {fallback_error}")
+                                                st.code(f"Temp file error: {temp_error}")
+                                                st.code(f"Final error: {final_error}")
+                                                
+                                                st.write("**可能原因:**")
+                                                st.write("- 雲端環境視頻編碼限制")
+                                                st.write("- 瀏覽器安全策略")
+                                                st.write("- MIME類型不匹配")
+                                                st.write("- 檔案大小限制")
+                                            
+                                            st.success("✅ **解決方案**: 請下載處理後的視頻檔案，檢測結果完全正常！")
                             
                             # Download button for processed video - always available
                             file_name = "rice_detection_video.mp4"
@@ -802,7 +857,8 @@ def main():
                     "video": {
                         "width": {"min": 640, "ideal": 1280, "max": 1920},
                         "height": {"min": 480, "ideal": 720, "max": 1080},
-                        "frameRate": {"min": 10, "ideal": 15, "max": 30}
+                        "frameRate": {"min": 10, "ideal": 15, "max": 30},
+                        "facingMode": "environment"  # Use rear camera on mobile devices
                     },
                     "audio": False
                 },
@@ -821,9 +877,10 @@ def main():
             **📱 How to use Live Camera:**
             1. Click "START" to begin camera detection
             2. Allow browser camera access when prompted
-            3. Position rice grains in front of camera
-            4. Adjust confidence/IoU thresholds as needed
-            5. Click "STOP" when finished
+            3. **📱 Mobile users**: App automatically uses rear camera for better rice grain capture
+            4. Position rice grains in front of camera
+            5. Adjust confidence/IoU thresholds as needed
+            6. Click "STOP" when finished
             
             **🔧 Connection Troubleshooting (雲端部署專用):**
             - 如果顯示 "Connection is taking longer than expected" → 正常現象，雲端環境需要TURN服務器
