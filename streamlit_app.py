@@ -18,6 +18,7 @@ import time
 import threading
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import av
+import subprocess
 
 # Page configuration
 st.set_page_config(
@@ -61,6 +62,36 @@ st.markdown("""
 
 # Global variables
 classifier = None
+
+# H.264 conversion function for better video compatibility
+def to_h264(input_path, output_path=None):
+    """Convert video to H.264 format for better browser compatibility"""
+    if output_path is None:
+        base_name = os.path.splitext(input_path)[0]
+        output_path = f"{base_name}_h264.mp4"
+    
+    try:
+        # Check if ffmpeg is available
+        subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+        
+        # Convert to H.264 with web-optimized settings
+        cmd = [
+            'ffmpeg', '-y',  # -y to overwrite output file
+            '-i', input_path,
+            '-c:v', 'libx264',  # H.264 codec
+            '-preset', 'fast',  # Fast encoding preset
+            '-crf', '23',  # Good quality setting
+            '-movflags', '+faststart',  # Optimize for web streaming
+            '-pix_fmt', 'yuv420p',  # Ensure compatibility
+            output_path
+        ]
+        
+        subprocess.run(cmd, capture_output=True, check=True)
+        return output_path
+        
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # ffmpeg not available or conversion failed
+        return None
 
 class RiceClassifierStreamlit:
     def __init__(self, weights_path='models/best.pt', device='', img_size=640, conf_thres=0.25, iou_thres=0.45):
@@ -519,11 +550,11 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
                 if status_placeholder:
                     status_placeholder.warning(f"⚠️ 視頻預覽準備失敗: {e}")
         
-        return detections, status, processed_video_bytes
+        return detections, status, processed_video_bytes, output_video_path
         
     except Exception as e:
         print(f"Error in process_video_interface: {e}")
-        return None, f"Error processing video: {str(e)}", None
+        return None, f"Error processing video: {str(e)}", None, None
     
     finally:
         # Clean up temp files - but keep processed video for download if it was successfully created
@@ -672,7 +703,7 @@ def main():
                 status_placeholder.info("🔄 初始化視頻處理...")
                 
                 # Process video with progress tracking
-                detections, status, processed_video_bytes = process_video_interface(
+                detections, status, processed_video_bytes, output_video_path = process_video_interface(
                     uploaded_video, conf_threshold, iou_threshold,
                     progress_placeholder, status_placeholder
                 )
@@ -685,7 +716,7 @@ def main():
                     st.success(f"✅ {status}")
                     
                     # Display processed video with detections
-                    if processed_video_bytes is not None:
+                    if output_video_path and os.path.exists(output_video_path):
                         st.subheader("🎥 Processed Video with Detections")
                         col1, col2 = st.columns(2)
                         
@@ -696,118 +727,59 @@ def main():
                         with col2:
                             st.markdown("**🎯 Detection Results Video**")
                             
-                            # Check if running on Streamlit Cloud (cloud environments have limited video support)
-                            import os
-                            is_cloud_deployment = (
-                                os.getenv("STREAMLIT_SHARING_MODE") == "sharing" or 
-                                "streamlit.app" in os.getenv("HOST", "") or
-                                "streamlitapp.com" in os.getenv("HOST", "") or
-                                ".streamlit.app" in str(os.getenv("HOSTNAME", "")) or
-                                "streamlit" in str(os.getenv("HOSTNAME", "")).lower()
-                            )
-                            
-                            video_displayed = False
-                            
-                            # For Streamlit Cloud: Skip standard st.video() and go directly to HTML5 player
-                            # This avoids the problematic ~/+/media/ URL issue
-                            if is_cloud_deployment:
-                                st.info("🌐 Streamlit Cloud檢測 - 使用HTML5播放器避免媒體URL問題")
-                                
-                            # Strategy 1: HTML5 video player (prioritized for cloud environments)
+                            # 使用檔案路徑 + H.264 轉碼的簡化方式
                             try:
-                                import base64
-                                video_size_mb = len(processed_video_bytes) / (1024 * 1024)
-                                
-                                # Use HTML5 player for cloud environments or if file is small enough
-                                should_use_html5 = is_cloud_deployment or video_size_mb < 20
-                                
-                                if should_use_html5 and video_size_mb < 30:  # 30MB limit for HTML5
-                                    st.info(f"🎬 載入HTML5視頻播放器 (檔案大小: {video_size_mb:.1f}MB)")
+                                # 1) 檢查原始偵測輸出是否完成
+                                if output_video_path and os.path.exists(output_video_path):
+                                    file_size_mb = os.path.getsize(output_video_path) / (1024 * 1024)
+                                    st.info(f"✅ 偵測完成 (檔案大小: {file_size_mb:.1f}MB)")
                                     
-                                    with st.spinner("正在編碼視頻..."):
-                                        b64_video = base64.b64encode(processed_video_bytes).decode()
+                                    # 2) 轉換 H.264 以確保 HTML5 可播
+                                    h264_path = to_h264(output_video_path)
                                     
-                                    # Enhanced HTML5 video player
-                                    video_html = f'''
-                                    <div style="text-align: center; margin: 10px 0;">
-                                        <video 
-                                            width="100%" 
-                                            height="400" 
-                                            controls 
-                                            muted 
-                                            playsinline 
-                                            webkit-playsinline
-                                            preload="metadata"
-                                            style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #000;"
-                                            onloadstart="console.log('Video loading started')"
-                                            onloadedmetadata="console.log('Video metadata loaded')"
-                                            oncanplay="console.log('Video can start playing')"
-                                            onerror="console.error('Video error:', this.error); this.style.background='#f0f0f0';"
-                                        >
-                                            <source src="data:video/mp4;base64,{b64_video}" type="video/mp4">
-                                            <source src="data:video/mp4;base64,{b64_video}" type="video/webm">
-                                            <div style="padding: 20px; background: #f0f0f0; border-radius: 8px; color: #666;">
-                                                <p>您的瀏覽器不支援HTML5視頻播放</p>
-                                                <p>請嘗試使用 Chrome、Firefox 或 Safari 瀏覽器</p>
-                                            </div>
-                                        </video>
-                                        <p style="font-size: 14px; color: #666; margin-top: 8px;">
-                                            ✅ HTML5視頻播放器 | 檔案: {video_size_mb:.1f}MB | 雲端兼容
-                                        </p>
-                                    </div>
-                                    '''
-                                    st.markdown(video_html, unsafe_allow_html=True)
-                                    video_displayed = True
-                                    st.success("✅ HTML5視頻播放器載入完成！")
+                                    if h264_path and os.path.exists(h264_path):
+                                        st.info("✅ H.264 轉換完成")
+                                        # 3) 用檔案路徑做預覽（比 bytes 穩）
+                                        st.video(h264_path)
+                                        st.success("✅ 視頻預覽載入成功！")
+                                        
+                                        # 4) 下載按鈕用轉好的 H.264
+                                        with open(h264_path, 'rb') as f:
+                                            h264_bytes = f.read()
+                                        
+                                        st.download_button(
+                                            label="📥 Download Processed Video (H.264)",
+                                            data=h264_bytes,
+                                            file_name="rice_detection_h264.mp4",
+                                            mime="video/mp4"
+                                        )
+                                    else:
+                                        # H.264 轉換失敗，使用原檔案
+                                        st.warning("⚠️ H.264 轉換失敗，使用原始檔案")
+                                        st.video(output_video_path)
+                                        
+                                        st.download_button(
+                                            label="📥 Download Processed Video",
+                                            data=processed_video_bytes,
+                                            file_name="rice_detection_video.mp4",
+                                            mime="video/mp4"
+                                        )
+                                else:
+                                    st.error("❌ 視頻檔案路徑無效或檔案不存在")
                                     
-                                elif video_size_mb >= 30:
-                                    st.warning(f"⚠️ 視頻檔案過大 ({video_size_mb:.1f}MB) - 超過HTML5播放器限制")
+                            except Exception as e:
+                                st.error(f"❌ 視頻預覽失敗: {str(e)}")
+                                # 緊急備用方案
+                                if processed_video_bytes:
+                                    st.warning("🔄 使用備用預覽方式...")
+                                    st.video(processed_video_bytes)
                                     
-                            except Exception as html5_error:
-                                st.error(f"⚠️ HTML5播放器失敗: {str(html5_error)[:150]}")
-                            
-                            # Strategy 2: Traditional Streamlit video (fallback for local environments)
-                            if not video_displayed and not is_cloud_deployment:
-                                try:
-                                    st.info("🔄 使用標準Streamlit視頻播放器...")
-                                    st.video(processed_video_bytes, format="video/mp4", start_time=0)
-                                    video_displayed = True
-                                    st.success("✅ 標準播放器載入成功！")
-                                    
-                                except Exception as standard_error:
-                                    st.warning(f"⚠️ 標準播放器失敗: {str(standard_error)[:100]}")
-                            
-                            # Strategy 4: Final fallback with helpful message
-                            if not video_displayed:
-                                st.error("⚠️ 雲端環境視頻預覽功能受限")
-                                st.info("💡 **視頻處理完成！** 檢測結果已正確生成，請使用下載按鈕獲取完整視頻。")
-                                
-                                # Show environment info for debugging
-                                with st.expander("🔧 調試信息"):
-                                    st.write("**環境檢測:**")
-                                    st.write(f"- Cloud deployment: {is_cloud_deployment}")
-                                    st.write(f"- Video size: {len(processed_video_bytes) / (1024*1024):.1f}MB")
-                                    st.write(f"- Host: {os.getenv('HOST', 'unknown')}")
-                                    st.write(f"- Hostname: {os.getenv('HOSTNAME', 'unknown')}")
-                                    
-                                    st.write("**建議解決方案:**")
-                                    st.write("1. 📥 下載視頻檔案查看完整結果")
-                                    st.write("2. 🖥️ 在本地環境運行可正常預覽")
-                                    st.write("3. 📱 使用現代瀏覽器（Chrome/Firefox/Safari）")
-                                
-                                st.success("✅ **重要**: 檢測功能完全正常，僅預覽功能受雲端限制！")
-                            
-                            # Download button for processed video - always available
-                            file_name = "rice_detection_video.mp4"
-                            # Note: output_video_path is not available in this scope, 
-                            # but the file format is determined by the codec used
-                            
-                            st.download_button(
-                                label="📥 Download Processed Video",
-                                data=processed_video_bytes,
-                                file_name=file_name,
-                                mime="video/mp4"
-                            )
+                                    st.download_button(
+                                        label="📥 Download Processed Video (Backup)",
+                                        data=processed_video_bytes,
+                                        file_name="rice_detection_backup.mp4",
+                                        mime="video/mp4"
+                                    )
                     else:
                         st.warning("⚠️ 處理後的視頻未能正確生成。請檢查輸入視頻格式。")
                     
