@@ -368,45 +368,72 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
     classifier.conf_thres = conf_threshold
     classifier.iou_thres = iou_threshold
     
-    # Save uploaded video to temp file
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-        tmp_file.write(video_file.read())
-        temp_video_path = tmp_file.name
+    temp_video_path = None
+    output_video_path = None
     
-    # Create output video path
-    output_video_path = temp_video_path.replace('.mp4', '_processed.mp4')
-    
-    # Progress callback function
-    def update_progress(progress, current_frame, total_frames, elapsed_time, eta):
-        if progress_placeholder is not None:
-            progress_placeholder.progress(progress)
-        if status_placeholder is not None:
-            mins_elapsed = int(elapsed_time // 60)
-            secs_elapsed = int(elapsed_time % 60)
-            mins_eta = int(eta // 60)
-            secs_eta = int(eta % 60)
-            
-            status_text = f"""🎬 處理進度: {current_frame}/{total_frames} frames ({progress:.1%})
+    try:
+        # Save uploaded video to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+            tmp_file.write(video_file.read())
+            temp_video_path = tmp_file.name
+        
+        # Create output video path
+        output_video_path = temp_video_path.replace('.mp4', '_processed.mp4')
+        
+        # Progress callback function
+        def update_progress(progress, current_frame, total_frames, elapsed_time, eta):
+            try:
+                if progress_placeholder is not None:
+                    progress_placeholder.progress(progress)
+                if status_placeholder is not None:
+                    mins_elapsed = int(elapsed_time // 60)
+                    secs_elapsed = int(elapsed_time % 60)
+                    mins_eta = int(eta // 60)
+                    secs_eta = int(eta % 60)
+                    
+                    status_text = f"""🎬 處理進度: {current_frame}/{total_frames} frames ({progress:.1%})
 ⏱️ 已用時間: {mins_elapsed:02d}:{secs_elapsed:02d}
 ⏳ 預估剩餘: {mins_eta:02d}:{secs_eta:02d}
 🔄 處理速度: {current_frame/elapsed_time:.1f} frames/sec"""
-            status_placeholder.info(status_text)
+                    status_placeholder.info(status_text)
+            except Exception as e:
+                # Ignore progress update errors to prevent breaking the main process
+                pass
+        
+        # Process video with progress tracking and output video
+        try:
+            detections, status = classifier.process_video(temp_video_path, output_path=output_video_path, progress_callback=update_progress)
+        except TypeError:
+            # Fallback for environments that don't support progress_callback
+            detections, status = classifier.process_video(temp_video_path, output_path=output_video_path)
+        
+        # Read processed video for display
+        processed_video_bytes = None
+        if output_video_path and os.path.exists(output_video_path):
+            try:
+                with open(output_video_path, 'rb') as f:
+                    processed_video_bytes = f.read()
+            except Exception as e:
+                # If reading fails, continue without processed video
+                pass
+        
+        return detections, status, processed_video_bytes
+        
+    except Exception as e:
+        return None, f"Error processing video: {str(e)}", None
     
-    # Process video with progress tracking and output video
-    detections, status = classifier.process_video(temp_video_path, output_path=output_video_path, progress_callback=update_progress)
-    
-    # Read processed video for display
-    processed_video_bytes = None
-    if os.path.exists(output_video_path):
-        with open(output_video_path, 'rb') as f:
-            processed_video_bytes = f.read()
-    
-    # Clean up temp files
-    os.unlink(temp_video_path)
-    if os.path.exists(output_video_path):
-        os.unlink(output_video_path)
-    
-    return detections, status, processed_video_bytes
+    finally:
+        # Clean up temp files
+        if temp_video_path and os.path.exists(temp_video_path):
+            try:
+                os.unlink(temp_video_path)
+            except:
+                pass
+        if output_video_path and os.path.exists(output_video_path):
+            try:
+                os.unlink(output_video_path)
+            except:
+                pass
 
 def main():
     """Main Streamlit application"""
