@@ -14,6 +14,10 @@ from PIL import Image
 import numpy as np
 import cv2
 import torch
+import time
+import threading
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
+import av
 
 # Page configuration
 st.set_page_config(
@@ -137,6 +141,65 @@ class RiceClassifierStreamlit:
         
         return img_tensor, img_resized
     
+    def predict_video_frame(self, frame):
+        """Run inference on a single video frame"""
+        if self.model is None:
+            return frame, []
+        
+        try:
+            result_img, detections = self.predict_image(frame)
+            return result_img if result_img is not None else frame, detections
+        except Exception as e:
+            return frame, []
+    
+    def process_video(self, video_path, output_path=None):
+        """Process entire video file"""
+        if self.model is None:
+            return None, "Model not loaded"
+        
+        try:
+            cap = cv2.VideoCapture(video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            if output_path:
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            
+            all_detections = []
+            frame_count = 0
+            
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                # Process frame
+                result_frame, detections = self.predict_video_frame(frame)
+                
+                # Store detections with frame info
+                for det in detections:
+                    det['frame'] = frame_count
+                    det['timestamp'] = frame_count / fps
+                all_detections.extend(detections)
+                
+                # Write frame if output specified
+                if output_path:
+                    out.write(cv2.cvtColor(result_frame, cv2.COLOR_RGB2BGR))
+                
+                frame_count += 1
+            
+            cap.release()
+            if output_path:
+                out.release()
+            
+            return all_detections, f"Processed {frame_count} frames"
+            
+        except Exception as e:
+            return None, f"Error processing video: {e}"
+    
     def predict_image(self, image):
         """Run inference on a single image"""
         if self.model is None:
@@ -250,6 +313,64 @@ def create_detection_summary(detections):
     
     return summary
 
+class VideoTransformer(VideoProcessorBase):
+    """Video transformer for webcam processing"""
+    
+    def __init__(self):
+        self.classifier = None
+        self.conf_threshold = 0.25
+        self.iou_threshold = 0.45
+    
+    def set_classifier(self, classifier, conf_threshold, iou_threshold):
+        self.classifier = classifier
+        self.conf_threshold = conf_threshold
+        self.iou_threshold = iou_threshold
+    
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        
+        if self.classifier is not None:
+            # Update thresholds
+            self.classifier.conf_thres = self.conf_threshold
+            self.classifier.iou_thres = self.iou_threshold
+            
+            # Process frame
+            result_img, detections = self.classifier.predict_video_frame(img)
+            
+            # Convert back to BGR for video output
+            if result_img is not None:
+                result_bgr = cv2.cvtColor(result_img, cv2.COLOR_RGB2BGR)
+                return av.VideoFrame.from_ndarray(result_bgr, format="bgr24")
+        
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
+
+def process_video_interface(video_file, conf_threshold, iou_threshold):
+    """Video processing interface"""
+    global classifier
+    
+    if classifier is None:
+        classifier_obj, status = load_classifier()
+        if classifier_obj is None:
+            return None, status
+        classifier = classifier_obj
+    
+    # Update thresholds
+    classifier.conf_thres = conf_threshold
+    classifier.iou_thres = iou_threshold
+    
+    # Save uploaded video to temp file
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+        tmp_file.write(video_file.read())
+        temp_video_path = tmp_file.name
+    
+    # Process video
+    detections, status = classifier.process_video(temp_video_path)
+    
+    # Clean up temp file
+    os.unlink(temp_video_path)
+    
+    return detections, status
+
 def main():
     """Main Streamlit application"""
     
@@ -313,10 +434,10 @@ def main():
         st.success(f"✅ {status}")
     
     # Main content tabs
-    tab1, tab2, tab3 = st.tabs(["📷 Image Classification", "📊 Batch Analysis", "ℹ️ Instructions"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📷 Image Upload", "📹 Video Processing", "📸 Live Camera", "📊 Batch Analysis", "ℹ️ Instructions"])
     
     with tab1:
-        st.header("📷 Image Classification")
+        st.header("📷 Image Upload Classification")
         
         uploaded_file = st.file_uploader(
             "Choose an image file",
@@ -378,6 +499,105 @@ def main():
                     st.error(f"❌ Prediction failed: {detections}")
     
     with tab2:
+        st.header("📹 Video Processing")
+        
+        uploaded_video = st.file_uploader(
+            "Choose a video file",
+            type=['mp4', 'avi', 'mov'],
+            help="Upload a video file for rice grain detection"
+        )
+        
+        if uploaded_video is not None:
+            st.video(uploaded_video)
+            
+            if st.button("🎬 Process Video"):
+                with st.spinner("🔄 Processing video..."):
+                    detections, status = process_video_interface(
+                        uploaded_video, conf_threshold, iou_threshold
+                    )
+                
+                if detections is not None:
+                    st.success(f"✅ {status}")
+                    
+                    # Video analysis summary
+                    if detections:
+                        st.subheader("📊 Video Analysis Results")
+                        
+                        # Count detections by class
+                        class_counts = {'normal': 0, 'broken': 0, 'crack': 0}
+                        frame_count = 0
+                        if detections:
+                            frame_count = max([d.get('frame', 0) for d in detections]) + 1
+                            for det in detections:
+                                class_counts[det['class']] += 1
+                        
+                        # Display metrics
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Frames", frame_count)
+                        with col2:
+                            st.metric("🟢 Normal", class_counts['normal'])
+                        with col3:
+                            st.metric("🟠 Broken", class_counts['broken'])
+                        with col4:
+                            st.metric("🔴 Crack", class_counts['crack'])
+                        
+                        # Detection timeline
+                        if len(detections) > 0:
+                            with st.expander("📈 Detection Timeline"):
+                                import pandas as pd
+                                df = pd.DataFrame(detections)
+                                if 'timestamp' in df.columns:
+                                    st.line_chart(df.groupby(['timestamp', 'class']).size().unstack(fill_value=0))
+                    else:
+                        st.info("No rice grains detected in the video.")
+                else:
+                    st.error(f"❌ Video processing failed: {status}")
+    
+    with tab3:
+        st.header("📸 Live Camera")
+        
+        # Check if model can be loaded
+        classifier_obj, status = load_classifier()
+        
+        if classifier_obj is not None:
+            st.info("🎥 Live camera detection with YOLOv7")
+            
+            # Camera settings
+            st.subheader("⚙️ Camera Settings")
+            col1, col2 = st.columns(2)
+            with col1:
+                camera_conf = st.slider("Camera Confidence", 0.1, 1.0, conf_threshold, 0.05, key="camera_conf")
+            with col2:
+                camera_iou = st.slider("Camera IoU", 0.1, 1.0, iou_threshold, 0.05, key="camera_iou")
+            
+            # WebRTC streamer  
+            video_transformer = VideoTransformer()
+            if classifier_obj is not None:
+                video_transformer.set_classifier(classifier_obj, camera_conf, camera_iou)
+            
+            webrtc_ctx = webrtc_streamer(
+                key="rice-detection",
+                video_processor_factory=lambda: video_transformer,
+                rtc_configuration=RTCConfiguration(
+                    ice_servers=[{"urls": ["stun:stun.l.google.com:19302"]}]
+                ),
+                media_stream_constraints={"video": True, "audio": False},
+                async_processing=True,
+            )
+            
+            st.markdown("""
+            **📱 How to use Live Camera:**
+            1. Click "START" to begin camera detection
+            2. Allow browser camera access when prompted
+            3. Position rice grains in front of camera
+            4. Adjust confidence/IoU thresholds as needed
+            5. Click "STOP" when finished
+            """)
+        else:
+            st.error("❌ Camera feature requires model to be loaded first")
+    
+    with tab4:
         st.header("📊 Batch Analysis")
         st.info("🚧 Batch processing feature coming soon!")
         
@@ -429,7 +649,7 @@ def main():
                     with col4:
                         st.metric("🔴 Crack", df['crack'].sum())
     
-    with tab3:
+    with tab5:
         st.header("ℹ️ How to Use")
         
         st.markdown("""

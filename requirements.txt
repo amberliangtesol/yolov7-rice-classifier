@@ -13,3 +13,5 @@ matplotlib
 seaborn
 thop
 tqdm
+streamlit-webrtc
+av
