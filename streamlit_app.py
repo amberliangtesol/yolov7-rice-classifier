@@ -580,11 +580,48 @@ def main():
                 key="rice-detection",
                 video_processor_factory=lambda: video_transformer,
                 rtc_configuration=RTCConfiguration(
-                    ice_servers=[{"urls": ["stun:stun.l.google.com:19302"]}]
+                    ice_servers=[
+                        # Google STUN servers
+                        {"urls": ["stun:stun.l.google.com:19302"]},
+                        {"urls": ["stun:stun1.l.google.com:19302"]},
+                        {"urls": ["stun:stun2.l.google.com:19302"]},
+                        {"urls": ["stun:stun3.l.google.com:19302"]},
+                        {"urls": ["stun:stun4.l.google.com:19302"]},
+                        # Alternative STUN servers
+                        {"urls": ["stun:stun.services.mozilla.com"]},
+                        {"urls": ["stun:stun.stunprotocol.org:3478"]},
+                        # Public TURN servers (for difficult networks)
+                        {
+                            "urls": ["turn:openrelay.metered.ca:80"],
+                            "username": "openrelayproject",
+                            "credential": "openrelayproject"
+                        },
+                        {
+                            "urls": ["turn:openrelay.metered.ca:443"],
+                            "username": "openrelayproject", 
+                            "credential": "openrelayproject"
+                        }
+                    ],
+                    ice_candidate_pool_size=10
                 ),
-                media_stream_constraints={"video": True, "audio": False},
+                media_stream_constraints={
+                    "video": {
+                        "width": {"min": 640, "ideal": 1280, "max": 1920},
+                        "height": {"min": 480, "ideal": 720, "max": 1080},
+                        "frameRate": {"min": 10, "ideal": 15, "max": 30}
+                    },
+                    "audio": False
+                },
                 async_processing=True,
             )
+            
+            # Connection status
+            if webrtc_ctx.state.playing:
+                st.success("🟢 Camera connected successfully!")
+            elif webrtc_ctx.state.signalling:
+                st.info("🔄 Connecting to camera...")
+            else:
+                st.warning("⚠️ Camera not connected. Click START to begin.")
             
             st.markdown("""
             **📱 How to use Live Camera:**
@@ -593,9 +630,63 @@ def main():
             3. Position rice grains in front of camera
             4. Adjust confidence/IoU thresholds as needed
             5. Click "STOP" when finished
+            
+            **🔧 Connection Troubleshooting:**
+            - Use **Chrome** or **Firefox** browser
+            - Ensure camera permission is granted
+            - Try refreshing the page if connection fails
+            - Check if other apps are using the camera
+            - On mobile: try switching between front/back camera
             """)
+            
+            # Add connection help
+            with st.expander("🛠️ Advanced Connection Settings"):
+                st.markdown("""
+                **Current STUN/TURN Servers:**
+                - Google STUN: stun.l.google.com:19302 (+ 4 backup)
+                - Mozilla STUN: stun.services.mozilla.com
+                - Standard STUN: stun.stunprotocol.org:3478
+                - Public TURN: openrelay.metered.ca (for difficult networks)
+                
+                **Video Quality Settings:**
+                - Resolution: 640x480 to 1920x1080
+                - Frame Rate: 10-30 FPS
+                - Optimized for rice grain detection
+                
+                **If connection still fails:**
+                1. Try using the "📷 Image Upload" tab instead
+                2. Take photos with your phone and upload them
+                3. Use the "📹 Video Processing" for recorded videos
+                """)
         else:
-            st.error("❌ Camera feature requires model to be loaded first")
+            st.error(f"❌ Model loading failed: {status}")
+        
+        # Simple camera alternative
+        st.markdown("---")
+        st.subheader("📱 Simple Camera Alternative")
+        st.info("💡 **If WebRTC doesn't work**: Use Streamlit's built-in camera!")
+        
+        simple_camera = st.camera_input("📸 Take a photo")
+        if simple_camera is not None:
+            # Process the captured image
+            image = Image.open(simple_camera)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(image, caption="📱 Captured Image", use_column_width=True)
+            
+            with col2:
+                with st.spinner("🔍 Analyzing image..."):
+                    result_img, detections = predict_image_interface(
+                        image, conf_threshold, iou_threshold
+                    )
+                
+                if result_img is not None:
+                    st.image(result_img, caption="🎯 Detection Results", use_column_width=True)
+                    summary = create_detection_summary(detections)
+                    st.markdown(summary)
+                else:
+                    st.error(f"❌ Analysis failed: {detections}")
     
     with tab4:
         st.header("📊 Batch Analysis")
