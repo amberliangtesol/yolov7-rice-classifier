@@ -857,9 +857,13 @@ def main():
                                         st.warning("⚠️ H.264 轉換失敗，使用原始檔案")
                                         st.video(output_video_path)
                                         
+                                        # 讀取原始檔案供下載
+                                        with open(output_video_path, 'rb') as f:
+                                            original_bytes = f.read()
+                                        
                                         st.download_button(
                                             label="📥 Download Processed Video",
-                                            data=processed_video_bytes,
+                                            data=original_bytes,
                                             file_name="rice_detection_video.mp4",
                                             mime="video/mp4"
                                         )
