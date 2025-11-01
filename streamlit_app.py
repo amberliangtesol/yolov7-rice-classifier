@@ -507,19 +507,6 @@ def main():
                                 emoji = {'normal': '🟢', 'broken': '🟠', 'crack': '🔴'}[det['class']]
                                 st.write(f"{emoji} **Detection {i+1}**: {det['class']} (confidence: {det['confidence']:.3f})")
                                 st.write(f"   📍 Bounding box: ({det['bbox'][0]}, {det['bbox'][1]}) to ({det['bbox'][2]}, {det['bbox'][3]})")
-                    
-                    # Download results
-                    if st.button("💾 Save Results"):
-                        # Convert image to bytes for download
-                        import io
-                        img_bytes = io.BytesIO()
-                        Image.fromarray(result_img).save(img_bytes, format='PNG')
-                        st.download_button(
-                            label="📥 Download Detection Image",
-                            data=img_bytes.getvalue(),
-                            file_name="rice_detection_results.png",
-                            mime="image/png"
-                        )
                 else:
                     st.error(f"❌ Prediction failed: {detections}")
     
