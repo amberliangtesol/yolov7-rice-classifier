@@ -853,11 +853,7 @@ def main():
                                             mime="video/mp4"
                                         )
                                     else:
-                                        # H.264 轉換失敗，使用原檔案
-                                        st.warning("⚠️ H.264 轉換失敗，使用原始檔案")
-                                        st.video(output_video_path)
-                                        
-                                        # 讀取原始檔案供下載
+                                        # H.264 轉換失敗，直接提供下載按鈕
                                         with open(output_video_path, 'rb') as f:
                                             original_bytes = f.read()
                                         
