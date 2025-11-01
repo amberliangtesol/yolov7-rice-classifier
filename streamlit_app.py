@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="🌾 YOLOv7 Rice Quality Classifier",
     page_icon="🌾",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Add custom CSS
@@ -376,7 +376,6 @@ def main():
     
     # Header
     st.markdown('<h1 class="main-header">🌾 YOLOv7 Rice Quality Classifier</h1>', unsafe_allow_html=True)
-    st.markdown("### Classify rice grains as **normal**, **broken**, or **crack**")
     
     # Sidebar
     with st.sidebar:
@@ -434,7 +433,7 @@ def main():
         st.success(f"✅ {status}")
     
     # Main content tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📷 Image Upload", "📹 Video Processing", "📸 Live Camera", "📊 Batch Analysis", "ℹ️ Instructions"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📷 Image Upload", "📹 Video Processing", "📸 Live Camera", "📊 Batch Analysis"])
     
     with tab1:
         st.header("📷 Image Upload Classification")
@@ -739,46 +738,6 @@ def main():
                         st.metric("🟠 Broken", df['broken'].sum())
                     with col4:
                         st.metric("🔴 Crack", df['crack'].sum())
-    
-    with tab5:
-        st.header("ℹ️ How to Use")
-        
-        st.markdown("""
-        ### 🚀 Quick Start
-        1. **Upload Image**: Use the "Image Classification" tab to upload a rice grain image
-        2. **Adjust Settings**: Use the sidebar to fine-tune detection parameters
-        3. **View Results**: See detected rice grains with bounding boxes and classifications
-        4. **Download Results**: Save the detection image with annotations
-        
-        ### 📊 Understanding Results
-        - **🟢 Normal**: Healthy, intact rice grains
-        - **🟠 Broken**: Damaged or broken rice grains  
-        - **🔴 Crack**: Rice grains with visible cracks
-        
-        ### ⚙️ Settings Guide
-        - **Confidence Threshold**: Minimum confidence for detections (higher = fewer, more confident detections)
-        - **IoU Threshold**: Overlap threshold for removing duplicate detections
-        
-        ### 💡 Tips for Better Results
-        - Use well-lit, clear images
-        - Ensure rice grains are clearly visible and separated
-        - Try different confidence thresholds if you get too many/few detections
-        - For best results, use images similar to training data
-        
-        ### 🔧 Technical Details
-        - **Model**: YOLOv7 deep learning architecture
-        - **Input Size**: 640x640 pixels (automatically resized)
-        - **Output**: Bounding boxes with class predictions and confidence scores
-        - **Device**: Automatically uses GPU if available, falls back to CPU
-        
-        ### 📱 Current Features
-        - ✅ Single image classification
-        - ✅ Real-time parameter adjustment
-        - ✅ Detailed detection results
-        - ✅ Result download functionality
-        - 🚧 Batch processing (coming soon)
-        - 🚧 Video processing (coming soon)
-        """)
 
 if __name__ == "__main__":
     main()
