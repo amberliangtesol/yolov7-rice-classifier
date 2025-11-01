@@ -157,57 +157,104 @@ class RiceClassifierStreamlit:
         if self.model is None:
             return None, "Model not loaded"
         
+        print(f"Starting video processing: {video_path}")
+        
         try:
             cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                print(f"Failed to open video: {video_path}")
+                return None, f"Error opening video: {video_path}"
+            
             fps = cap.get(cv2.CAP_PROP_FPS)
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             
+            print(f"Video properties: {total_frames} frames, {fps} FPS, {width}x{height}")
+            
+            out = None
             if output_path:
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                # Try different codecs for better browser compatibility
+                codecs_to_try = [
+                    'avc1',  # H.264 - best browser support
+                    'H264',  # Alternative H.264
+                    'mp4v',  # MPEG-4 fallback
+                    'XVID'   # Xvid fallback
+                ]
+                
+                for codec in codecs_to_try:
+                    try:
+                        fourcc = cv2.VideoWriter_fourcc(*codec)
+                        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                        if out.isOpened():
+                            print(f"Successfully created video writer with codec: {codec}")
+                            break
+                        else:
+                            out.release()
+                    except Exception as codec_error:
+                        print(f"Failed to create video writer with codec {codec}: {codec_error}")
+                        continue
+                
+                if out is None or not out.isOpened():
+                    print(f"Failed to create output video writer with any codec")
+                    cap.release()
+                    return None, f"Error creating output video: {output_path}"
             
             all_detections = []
             frame_count = 0
             start_time = time.time()
+            
+            print("Starting frame processing...")
             
             while True:
                 ret, frame = cap.read()
                 if not ret:
                     break
                 
-                # Process frame
-                result_frame, detections = self.predict_video_frame(frame)
-                
-                # Store detections with frame info
-                for det in detections:
-                    det['frame'] = frame_count
-                    det['timestamp'] = frame_count / fps
-                all_detections.extend(detections)
-                
-                # Write frame if output specified
-                if output_path:
-                    out.write(cv2.cvtColor(result_frame, cv2.COLOR_RGB2BGR))
-                
-                frame_count += 1
-                
-                # Update progress if callback provided
-                if progress_callback and total_frames > 0:
-                    progress = frame_count / total_frames
-                    elapsed_time = time.time() - start_time
-                    if frame_count > 0:
-                        eta = (elapsed_time / frame_count) * (total_frames - frame_count)
-                        progress_callback(progress, frame_count, total_frames, elapsed_time, eta)
+                try:
+                    # Process frame
+                    result_frame, detections = self.predict_video_frame(frame)
+                    
+                    # Store detections with frame info
+                    for det in detections:
+                        det['frame'] = frame_count
+                        det['timestamp'] = frame_count / fps
+                    all_detections.extend(detections)
+                    
+                    # Write frame if output specified
+                    if out is not None:
+                        out.write(cv2.cvtColor(result_frame, cv2.COLOR_RGB2BGR))
+                    
+                    frame_count += 1
+                    
+                    # Update progress if callback provided
+                    if progress_callback and total_frames > 0:
+                        progress = frame_count / total_frames
+                        elapsed_time = time.time() - start_time
+                        if frame_count > 0:
+                            eta = (elapsed_time / frame_count) * (total_frames - frame_count)
+                            progress_callback(progress, frame_count, total_frames, elapsed_time, eta)
+                    
+                    # Print progress every 10 frames
+                    if frame_count % 10 == 0:
+                        progress_pct = (frame_count / total_frames) * 100
+                        print(f"Processed {frame_count}/{total_frames} frames ({progress_pct:.1f}%)")
+                        
+                except Exception as frame_error:
+                    print(f"Error processing frame {frame_count}: {frame_error}")
+                    frame_count += 1
+                    continue
             
             cap.release()
-            if output_path:
+            if out is not None:
                 out.release()
             
             total_time = time.time() - start_time
+            print(f"Video processing completed: {frame_count} frames in {total_time:.1f}s")
             return all_detections, f"Processed {frame_count} frames in {total_time:.1f}s"
             
         except Exception as e:
+            print(f"Error in process_video: {e}")
             return None, f"Error processing video: {e}"
     
     def predict_image(self, image):
@@ -273,11 +320,18 @@ def load_classifier():
         return None, f"Model file not found at {weights_path}"
     
     try:
+        # Suppress PyTorch warnings
+        import warnings
+        warnings.filterwarnings("ignore", category=UserWarning)
+        
+        print(f"Loading model from {weights_path}...")
         classifier = RiceClassifierStreamlit(weights_path=weights_path)
         if classifier.model is None:
             return None, "Failed to load model"
+        print("Model loaded successfully!")
         return classifier, "Model loaded successfully!"
     except Exception as e:
+        print(f"Error loading model: {e}")
         return None, f"Error initializing classifier: {e}"
 
 def predict_image_interface(image, conf_threshold, iou_threshold):
@@ -358,6 +412,10 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
     """Video processing interface with progress tracking"""
     global classifier
     
+    # Add debug logging
+    if status_placeholder:
+        status_placeholder.info("🔧 載入模型中...")
+    
     if classifier is None:
         classifier_obj, status = load_classifier()
         if classifier_obj is None:
@@ -372,13 +430,33 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
     output_video_path = None
     
     try:
+        if status_placeholder:
+            status_placeholder.info("💾 保存視頻文件...")
+        
         # Save uploaded video to temp file
+        video_bytes = video_file.read()
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-            tmp_file.write(video_file.read())
+            tmp_file.write(video_bytes)
             temp_video_path = tmp_file.name
         
         # Create output video path
         output_video_path = temp_video_path.replace('.mp4', '_processed.mp4')
+        
+        if status_placeholder:
+            status_placeholder.info("📹 讀取視頻信息...")
+        
+        # Check video can be opened
+        import cv2
+        cap = cv2.VideoCapture(temp_video_path)
+        if not cap.isOpened():
+            return None, "Error: 無法打開視頻文件", None
+        
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        cap.release()
+        
+        if status_placeholder:
+            status_placeholder.info(f"📊 視頻信息: {total_frames} frames, {fps:.1f} FPS")
         
         # Progress callback function
         def update_progress(progress, current_frame, total_frames, elapsed_time, eta):
@@ -400,40 +478,57 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
                 # Ignore progress update errors to prevent breaking the main process
                 pass
         
+        if status_placeholder:
+            status_placeholder.info("🚀 開始處理視頻...")
+        
         # Process video with progress tracking and output video
         try:
             detections, status = classifier.process_video(temp_video_path, output_path=output_video_path, progress_callback=update_progress)
-        except TypeError:
+        except TypeError as e:
             # Fallback for environments that don't support progress_callback
+            if status_placeholder:
+                status_placeholder.warning(f"⚠️ Progress callback not supported, falling back... ({str(e)})")
             detections, status = classifier.process_video(temp_video_path, output_path=output_video_path)
         
         # Read processed video for display
         processed_video_bytes = None
         if output_video_path and os.path.exists(output_video_path):
             try:
-                with open(output_video_path, 'rb') as f:
-                    processed_video_bytes = f.read()
+                if status_placeholder:
+                    status_placeholder.info("📤 準備視頻預覽...")
+                
+                # Check file size
+                file_size = os.path.getsize(output_video_path)
+                print(f"Output video file size: {file_size} bytes")
+                
+                if file_size > 0:
+                    with open(output_video_path, 'rb') as f:
+                        processed_video_bytes = f.read()
+                    print(f"Successfully read {len(processed_video_bytes)} bytes for video preview")
+                else:
+                    print("Output video file is empty")
             except Exception as e:
-                # If reading fails, continue without processed video
-                pass
+                print(f"Error reading processed video for preview: {e}")
+                if status_placeholder:
+                    status_placeholder.warning(f"⚠️ 視頻預覽準備失敗: {e}")
         
         return detections, status, processed_video_bytes
         
     except Exception as e:
+        print(f"Error in process_video_interface: {e}")
         return None, f"Error processing video: {str(e)}", None
     
     finally:
-        # Clean up temp files
+        # Clean up temp files - but keep processed video for download if it was successfully created
         if temp_video_path and os.path.exists(temp_video_path):
             try:
                 os.unlink(temp_video_path)
-            except:
-                pass
-        if output_video_path and os.path.exists(output_video_path):
-            try:
-                os.unlink(output_video_path)
-            except:
-                pass
+                print(f"Cleaned up temp input video: {temp_video_path}")
+            except Exception as e:
+                print(f"Failed to cleanup temp input video: {e}")
+        
+        # Only clean up output video after a delay to allow preview/download
+        # Note: In production, you might want to implement a proper cleanup mechanism
 
 def main():
     """Main Streamlit application"""
@@ -593,7 +688,11 @@ def main():
                         
                         with col2:
                             st.markdown("**🎯 Detection Results Video**")
-                            st.video(processed_video_bytes)
+                            try:
+                                st.video(processed_video_bytes, format="video/mp4")
+                            except Exception as video_error:
+                                st.error(f"視頻預覽錯誤: {video_error}")
+                                st.info("視頻處理成功，但預覽失敗。請使用下載按鈕獲取處理後的視頻。")
                             
                             # Download button for processed video
                             st.download_button(
@@ -602,6 +701,8 @@ def main():
                                 file_name="rice_detection_video.mp4",
                                 mime="video/mp4"
                             )
+                    else:
+                        st.warning("⚠️ 處理後的視頻未能正確生成。請檢查輸入視頻格式。")
                     
                     # Video analysis summary
                     if detections:
