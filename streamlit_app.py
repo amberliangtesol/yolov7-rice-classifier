@@ -702,79 +702,80 @@ def main():
                                 os.getenv("STREAMLIT_SHARING_MODE") == "sharing" or 
                                 "streamlit.app" in os.getenv("HOST", "") or
                                 "streamlitapp.com" in os.getenv("HOST", "") or
-                                ".streamlit.app" in str(os.getenv("HOSTNAME", ""))
+                                ".streamlit.app" in str(os.getenv("HOSTNAME", "")) or
+                                "streamlit" in str(os.getenv("HOSTNAME", "")).lower()
                             )
                             
-                            if is_cloud_deployment:
-                                st.info("🌐 雲端環境檢測 - 使用增強型視頻播放器")
-                                
                             video_displayed = False
                             
-                            # Strategy 1: Try direct video display first (works locally and some cloud environments)
-                            if not is_cloud_deployment:
-                                try:
-                                    st.video(processed_video_bytes, start_time=0)
-                                    video_displayed = True
-                                    st.success("✅ 使用標準視頻播放器")
-                                except Exception as video_error:
-                                    st.warning(f"⚠️ 標準播放器失敗: {str(video_error)[:100]}")
-                            
-                            # Strategy 2: For cloud environments, try HTML5 video player first
-                            if not video_displayed:
-                                try:
-                                    import base64
-                                    # Check video size before base64 encoding
-                                    video_size_mb = len(processed_video_bytes) / (1024 * 1024)
+                            # For Streamlit Cloud: Skip standard st.video() and go directly to HTML5 player
+                            # This avoids the problematic ~/+/media/ URL issue
+                            if is_cloud_deployment:
+                                st.info("🌐 Streamlit Cloud檢測 - 使用HTML5播放器避免媒體URL問題")
+                                
+                            # Strategy 1: HTML5 video player (prioritized for cloud environments)
+                            try:
+                                import base64
+                                video_size_mb = len(processed_video_bytes) / (1024 * 1024)
+                                
+                                # Use HTML5 player for cloud environments or if file is small enough
+                                should_use_html5 = is_cloud_deployment or video_size_mb < 20
+                                
+                                if should_use_html5 and video_size_mb < 30:  # 30MB limit for HTML5
+                                    st.info(f"🎬 載入HTML5視頻播放器 (檔案大小: {video_size_mb:.1f}MB)")
                                     
-                                    if video_size_mb < 25:  # Reduced limit for cloud compatibility
-                                        st.info(f"🎬 使用HTML5播放器載入視頻 (大小: {video_size_mb:.1f}MB)")
+                                    with st.spinner("正在編碼視頻..."):
                                         b64_video = base64.b64encode(processed_video_bytes).decode()
-                                        
-                                        # Enhanced HTML5 video player for cloud deployment
-                                        video_html = f'''
-                                        <div style="text-align: center; margin: 10px 0;">
-                                            <video 
-                                                width="100%" 
-                                                height="400" 
-                                                controls 
-                                                muted 
-                                                playsinline 
-                                                webkit-playsinline
-                                                style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
-                                                onloadstart="console.log('Video loading started')"
-                                                onloadeddata="console.log('Video data loaded')"
-                                                onerror="console.error('Video error:', this.error)"
-                                            >
-                                                <source src="data:video/mp4;base64,{b64_video}" type="video/mp4">
-                                                <p style="padding: 20px; background: #f0f0f0; border-radius: 8px;">
-                                                    您的瀏覽器不支援HTML5視頻播放。請嘗試使用Chrome、Firefox或Safari瀏覽器。
-                                                </p>
-                                            </video>
-                                            <p style="font-size: 14px; color: #666; margin-top: 8px;">
-                                                ✅ HTML5視頻播放器 | 檔案大小: {video_size_mb:.1f}MB
-                                            </p>
-                                        </div>
-                                        '''
-                                        st.markdown(video_html, unsafe_allow_html=True)
-                                        video_displayed = True
-                                        st.success("✅ 視頻預覽載入成功！")
-                                        
-                                    else:
-                                        st.warning(f"⚠️ 視頻檔案過大 ({video_size_mb:.1f}MB) - 雲端預覽限制為25MB")
-                                        
-                                except Exception as html5_error:
-                                    st.error(f"⚠️ HTML5播放器載入失敗: {str(html5_error)[:100]}")
+                                    
+                                    # Enhanced HTML5 video player
+                                    video_html = f'''
+                                    <div style="text-align: center; margin: 10px 0;">
+                                        <video 
+                                            width="100%" 
+                                            height="400" 
+                                            controls 
+                                            muted 
+                                            playsinline 
+                                            webkit-playsinline
+                                            preload="metadata"
+                                            style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #000;"
+                                            onloadstart="console.log('Video loading started')"
+                                            onloadedmetadata="console.log('Video metadata loaded')"
+                                            oncanplay="console.log('Video can start playing')"
+                                            onerror="console.error('Video error:', this.error); this.style.background='#f0f0f0';"
+                                        >
+                                            <source src="data:video/mp4;base64,{b64_video}" type="video/mp4">
+                                            <source src="data:video/mp4;base64,{b64_video}" type="video/webm">
+                                            <div style="padding: 20px; background: #f0f0f0; border-radius: 8px; color: #666;">
+                                                <p>您的瀏覽器不支援HTML5視頻播放</p>
+                                                <p>請嘗試使用 Chrome、Firefox 或 Safari 瀏覽器</p>
+                                            </div>
+                                        </video>
+                                        <p style="font-size: 14px; color: #666; margin-top: 8px;">
+                                            ✅ HTML5視頻播放器 | 檔案: {video_size_mb:.1f}MB | 雲端兼容
+                                        </p>
+                                    </div>
+                                    '''
+                                    st.markdown(video_html, unsafe_allow_html=True)
+                                    video_displayed = True
+                                    st.success("✅ HTML5視頻播放器載入完成！")
+                                    
+                                elif video_size_mb >= 30:
+                                    st.warning(f"⚠️ 視頻檔案過大 ({video_size_mb:.1f}MB) - 超過HTML5播放器限制")
+                                    
+                            except Exception as html5_error:
+                                st.error(f"⚠️ HTML5播放器失敗: {str(html5_error)[:150]}")
                             
-                            # Strategy 3: Traditional Streamlit video (fallback)
-                            if not video_displayed:
+                            # Strategy 2: Traditional Streamlit video (fallback for local environments)
+                            if not video_displayed and not is_cloud_deployment:
                                 try:
-                                    st.info("🔄 嘗試標準視頻播放器...")
+                                    st.info("🔄 使用標準Streamlit視頻播放器...")
                                     st.video(processed_video_bytes, format="video/mp4", start_time=0)
                                     video_displayed = True
-                                    st.success("✅ 使用標準播放器成功！")
+                                    st.success("✅ 標準播放器載入成功！")
                                     
                                 except Exception as standard_error:
-                                    st.warning(f"⚠️ 標準播放器也失敗: {str(standard_error)[:100]}")
+                                    st.warning(f"⚠️ 標準播放器失敗: {str(standard_error)[:100]}")
                             
                             # Strategy 4: Final fallback with helpful message
                             if not video_displayed:
