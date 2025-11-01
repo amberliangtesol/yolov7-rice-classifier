@@ -361,7 +361,7 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
     if classifier is None:
         classifier_obj, status = load_classifier()
         if classifier_obj is None:
-            return None, status
+            return None, status, None
         classifier = classifier_obj
     
     # Update thresholds
@@ -372,6 +372,9 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
     with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
         tmp_file.write(video_file.read())
         temp_video_path = tmp_file.name
+    
+    # Create output video path
+    output_video_path = temp_video_path.replace('.mp4', '_processed.mp4')
     
     # Progress callback function
     def update_progress(progress, current_frame, total_frames, elapsed_time, eta):
@@ -389,13 +392,21 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
 🔄 處理速度: {current_frame/elapsed_time:.1f} frames/sec"""
             status_placeholder.info(status_text)
     
-    # Process video with progress tracking
-    detections, status = classifier.process_video(temp_video_path, progress_callback=update_progress)
+    # Process video with progress tracking and output video
+    detections, status = classifier.process_video(temp_video_path, output_path=output_video_path, progress_callback=update_progress)
     
-    # Clean up temp file
+    # Read processed video for display
+    processed_video_bytes = None
+    if os.path.exists(output_video_path):
+        with open(output_video_path, 'rb') as f:
+            processed_video_bytes = f.read()
+    
+    # Clean up temp files
     os.unlink(temp_video_path)
+    if os.path.exists(output_video_path):
+        os.unlink(output_video_path)
     
-    return detections, status
+    return detections, status, processed_video_bytes
 
 def main():
     """Main Streamlit application"""
@@ -532,7 +543,7 @@ def main():
                 status_placeholder.info("🔄 初始化視頻處理...")
                 
                 # Process video with progress tracking
-                detections, status = process_video_interface(
+                detections, status, processed_video_bytes = process_video_interface(
                     uploaded_video, conf_threshold, iou_threshold,
                     progress_placeholder, status_placeholder
                 )
@@ -543,6 +554,27 @@ def main():
                 
                 if detections is not None:
                     st.success(f"✅ {status}")
+                    
+                    # Display processed video with detections
+                    if processed_video_bytes is not None:
+                        st.subheader("🎥 Processed Video with Detections")
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**📤 Original Video**")
+                            st.video(uploaded_video)
+                        
+                        with col2:
+                            st.markdown("**🎯 Detection Results Video**")
+                            st.video(processed_video_bytes)
+                            
+                            # Download button for processed video
+                            st.download_button(
+                                label="📥 Download Processed Video",
+                                data=processed_video_bytes,
+                                file_name="rice_detection_video.mp4",
+                                mime="video/mp4"
+                            )
                     
                     # Video analysis summary
                     if detections:
