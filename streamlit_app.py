@@ -152,8 +152,8 @@ class RiceClassifierStreamlit:
         except Exception as e:
             return frame, []
     
-    def process_video(self, video_path, output_path=None):
-        """Process entire video file"""
+    def process_video(self, video_path, output_path=None, progress_callback=None):
+        """Process entire video file with progress tracking"""
         if self.model is None:
             return None, "Model not loaded"
         
@@ -170,6 +170,7 @@ class RiceClassifierStreamlit:
             
             all_detections = []
             frame_count = 0
+            start_time = time.time()
             
             while True:
                 ret, frame = cap.read()
@@ -190,12 +191,21 @@ class RiceClassifierStreamlit:
                     out.write(cv2.cvtColor(result_frame, cv2.COLOR_RGB2BGR))
                 
                 frame_count += 1
+                
+                # Update progress if callback provided
+                if progress_callback and total_frames > 0:
+                    progress = frame_count / total_frames
+                    elapsed_time = time.time() - start_time
+                    if frame_count > 0:
+                        eta = (elapsed_time / frame_count) * (total_frames - frame_count)
+                        progress_callback(progress, frame_count, total_frames, elapsed_time, eta)
             
             cap.release()
             if output_path:
                 out.release()
             
-            return all_detections, f"Processed {frame_count} frames"
+            total_time = time.time() - start_time
+            return all_detections, f"Processed {frame_count} frames in {total_time:.1f}s"
             
         except Exception as e:
             return None, f"Error processing video: {e}"
@@ -344,8 +354,8 @@ class VideoTransformer(VideoProcessorBase):
         
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-def process_video_interface(video_file, conf_threshold, iou_threshold):
-    """Video processing interface"""
+def process_video_interface(video_file, conf_threshold, iou_threshold, progress_placeholder=None, status_placeholder=None):
+    """Video processing interface with progress tracking"""
     global classifier
     
     if classifier is None:
@@ -363,8 +373,24 @@ def process_video_interface(video_file, conf_threshold, iou_threshold):
         tmp_file.write(video_file.read())
         temp_video_path = tmp_file.name
     
-    # Process video
-    detections, status = classifier.process_video(temp_video_path)
+    # Progress callback function
+    def update_progress(progress, current_frame, total_frames, elapsed_time, eta):
+        if progress_placeholder is not None:
+            progress_placeholder.progress(progress)
+        if status_placeholder is not None:
+            mins_elapsed = int(elapsed_time // 60)
+            secs_elapsed = int(elapsed_time % 60)
+            mins_eta = int(eta // 60)
+            secs_eta = int(eta % 60)
+            
+            status_text = f"""🎬 處理進度: {current_frame}/{total_frames} frames ({progress:.1%})
+⏱️ 已用時間: {mins_elapsed:02d}:{secs_elapsed:02d}
+⏳ 預估剩餘: {mins_eta:02d}:{secs_eta:02d}
+🔄 處理速度: {current_frame/elapsed_time:.1f} frames/sec"""
+            status_placeholder.info(status_text)
+    
+    # Process video with progress tracking
+    detections, status = classifier.process_video(temp_video_path, progress_callback=update_progress)
     
     # Clean up temp file
     os.unlink(temp_video_path)
@@ -510,10 +536,23 @@ def main():
             st.video(uploaded_video)
             
             if st.button("🎬 Process Video"):
-                with st.spinner("🔄 Processing video..."):
-                    detections, status = process_video_interface(
-                        uploaded_video, conf_threshold, iou_threshold
-                    )
+                # Create placeholders for progress tracking
+                progress_placeholder = st.empty()
+                status_placeholder = st.empty()
+                
+                # Show initial progress
+                progress_placeholder.progress(0)
+                status_placeholder.info("🔄 初始化視頻處理...")
+                
+                # Process video with progress tracking
+                detections, status = process_video_interface(
+                    uploaded_video, conf_threshold, iou_threshold,
+                    progress_placeholder, status_placeholder
+                )
+                
+                # Clear progress indicators when done
+                progress_placeholder.empty()
+                status_placeholder.empty()
                 
                 if detections is not None:
                     st.success(f"✅ {status}")
@@ -689,7 +728,7 @@ def main():
     
     with tab4:
         st.header("📊 Batch Analysis")
-        st.info("🚧 Batch processing feature coming soon!")
+        st.info("📁 Upload multiple images for batch processing with real-time progress tracking!")
         
         uploaded_files = st.file_uploader(
             "Choose multiple image files",
@@ -702,9 +741,19 @@ def main():
             st.write(f"📁 Uploaded {len(uploaded_files)} images")
             if st.button("🔄 Process All Images"):
                 progress_bar = st.progress(0)
+                status_text = st.empty()
                 results = []
+                start_time = time.time()
                 
                 for i, file in enumerate(uploaded_files):
+                    # Update status
+                    elapsed = time.time() - start_time
+                    if i > 0:
+                        eta = (elapsed / i) * (len(uploaded_files) - i)
+                        status_text.info(f"📸 處理中: {i+1}/{len(uploaded_files)} ({(i+1)/len(uploaded_files):.1%}) | ⏱️ 已用時間: {elapsed:.1f}s | ⏳ 預估剩餘: {eta:.1f}s")
+                    else:
+                        status_text.info(f"📸 處理中: {i+1}/{len(uploaded_files)} ({(i+1)/len(uploaded_files):.1%})")
+                    
                     image = Image.open(file)
                     result_img, detections = predict_image_interface(
                         image, conf_threshold, iou_threshold
@@ -720,6 +769,9 @@ def main():
                         })
                     
                     progress_bar.progress((i + 1) / len(uploaded_files))
+                
+                # Clear progress indicators
+                status_text.empty()
                 
                 # Display batch results
                 if results:
