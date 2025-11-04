@@ -2,7 +2,7 @@
 """
 YOLOv7 Rice Quality Classification Streamlit App - Unified Full Version
 Supports image upload, video processing, and live classification
-Classes: normal, broken, crack
+Classes: white_rice, thi_rice, brown_rice, black_rice
 """
 
 import os
@@ -183,8 +183,8 @@ class RiceClassifierStreamlit:
         self.iou_thres = iou_thres
         
         # Class names for rice quality
-        self.names = ['normal', 'broken', 'crack']
-        self.colors = [(0, 255, 0), (255, 165, 0), (255, 0, 0)]  # Green, Orange, Red
+        self.names = ['white_rice', 'thi_rice', 'brown_rice', 'black_rice']
+        self.colors = [(255, 255, 255), (255, 215, 0), (139, 69, 19), (0, 0, 0)]  # White, Gold, Brown, Black
         
         # Initialize device
         self.device = self._select_device(device)
@@ -505,7 +505,7 @@ def create_detection_summary(detections):
         return "No rice grains detected. Try adjusting the confidence threshold."
     
     # Count by class
-    class_counts = {'normal': 0, 'broken': 0, 'crack': 0}
+    class_counts = {'white_rice': 0, 'thi_rice': 0, 'brown_rice': 0, 'black_rice': 0}
     for det in detections:
         class_counts[det['class']] += 1
     
@@ -515,7 +515,7 @@ def create_detection_summary(detections):
     # Add percentages
     for class_name, count in class_counts.items():
         percentage = (count / total * 100) if total > 0 else 0
-        emoji = {'normal': '🟢', 'broken': '🟠', 'crack': '🔴'}[class_name]
+        emoji = {'white_rice': '⚪', 'thi_rice': '🟡', 'brown_rice': '🟤', 'black_rice': '⚫'}[class_name]
         summary += f"{emoji} **{class_name.capitalize()}**: {count} ({percentage:.1f}%)\n"
     
     return summary
@@ -684,7 +684,7 @@ def main():
     """Main Streamlit application"""
     
     # Header
-    st.markdown('<h1 class="main-header">🌾 YOLOv7 Rice Quality Classifier</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🌾 YOLOv7 Rice Type Classifier</h1>', unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
@@ -699,7 +699,7 @@ def main():
         st.subheader("📊 Model Information")
         st.info("""
         **Architecture**: YOLOv7
-        **Classes**: 3 (normal, broken, crack)
+        **Classes**: 4 (white_rice, thi_rice, brown_rice, black_rice)
         **Input Size**: 640x640
         **Format**: PyTorch (.pt)
         """)
@@ -707,9 +707,10 @@ def main():
         # Legend
         st.subheader("🏷️ Class Legend")
         st.markdown("""
-        - 🟢 **Normal**: Healthy rice grains
-        - 🟠 **Broken**: Damaged/broken grains
-        - 🔴 **Crack**: Grains with cracks
+        - ⚪ **White Rice**: Regular white rice
+        - 🟡 **Thi Rice**: Thai jasmine rice
+        - 🟤 **Brown Rice**: Whole grain brown rice
+        - ⚫ **Black Rice**: Black glutinous rice
         """)
         
         # System info
@@ -787,7 +788,7 @@ def main():
                     if detections:
                         with st.expander(f"📋 Detailed Results ({len(detections)} detections)"):
                             for i, det in enumerate(detections):
-                                emoji = {'normal': '🟢', 'broken': '🟠', 'crack': '🔴'}[det['class']]
+                                emoji = {'white_rice': '⚪', 'thi_rice': '🟡', 'brown_rice': '🟤', 'black_rice': '⚫'}[det['class']]
                                 st.write(f"{emoji} **Detection {i+1}**: {det['class']} (confidence: {det['confidence']:.3f})")
                                 st.write(f"   📍 Bounding box: ({det['bbox'][0]}, {det['bbox'][1]}) to ({det['bbox'][2]}, {det['bbox'][3]})")
                 else:
@@ -912,7 +913,7 @@ def main():
                         st.subheader("📊 Video Analysis Results")
                         
                         # Count detections by class
-                        class_counts = {'normal': 0, 'broken': 0, 'crack': 0}
+                        class_counts = {'white_rice': 0, 'thi_rice': 0, 'brown_rice': 0, 'black_rice': 0}
                         frame_count = 0
                         if detections:
                             frame_count = max([d.get('frame', 0) for d in detections]) + 1
@@ -920,15 +921,17 @@ def main():
                                 class_counts[det['class']] += 1
                         
                         # Display metrics
-                        col1, col2, col3, col4 = st.columns(4)
+                        col1, col2, col3, col4, col5 = st.columns(5)
                         with col1:
                             st.metric("Total Frames", frame_count)
                         with col2:
-                            st.metric("🟢 Normal", class_counts['normal'])
+                            st.metric("⚪ White Rice", class_counts['white_rice'])
                         with col3:
-                            st.metric("🟠 Broken", class_counts['broken'])
+                            st.metric("🟡 Thi Rice", class_counts['thi_rice'])
                         with col4:
-                            st.metric("🔴 Crack", class_counts['crack'])
+                            st.metric("🟤 Brown Rice", class_counts['brown_rice'])
+                        with col5:
+                            st.metric("⚫ Black Rice", class_counts['black_rice'])
                         
                         # Detection timeline
                         if len(detections) > 0:
@@ -1126,9 +1129,10 @@ def main():
                         results.append({
                             'filename': file.name,
                             'detections': len(detections),
-                            'normal': len([d for d in detections if d['class'] == 'normal']),
-                            'broken': len([d for d in detections if d['class'] == 'broken']),
-                            'crack': len([d for d in detections if d['class'] == 'crack'])
+                            'white_rice': len([d for d in detections if d['class'] == 'white_rice']),
+                            'thi_rice': len([d for d in detections if d['class'] == 'thi_rice']),
+                            'brown_rice': len([d for d in detections if d['class'] == 'brown_rice']),
+                            'black_rice': len([d for d in detections if d['class'] == 'black_rice'])
                         })
                     
                     progress_bar.progress((i + 1) / len(uploaded_files))
@@ -1144,15 +1148,17 @@ def main():
                     st.dataframe(df)
                     
                     # Summary statistics
-                    col1, col2, col3, col4 = st.columns(4)
+                    col1, col2, col3, col4, col5 = st.columns(5)
                     with col1:
                         st.metric("Total Images", len(results))
                     with col2:
-                        st.metric("🟢 Normal", df['normal'].sum())
+                        st.metric("⚪ White Rice", df['white_rice'].sum())
                     with col3:
-                        st.metric("🟠 Broken", df['broken'].sum())
+                        st.metric("🟡 Thi Rice", df['thi_rice'].sum())
                     with col4:
-                        st.metric("🔴 Crack", df['crack'].sum())
+                        st.metric("🟤 Brown Rice", df['brown_rice'].sum())
+                    with col5:
+                        st.metric("⚫ Black Rice", df['black_rice'].sum())
 
 if __name__ == "__main__":
     main()
