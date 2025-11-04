@@ -440,8 +440,26 @@ class RiceClassifierStreamlit:
                         label = f'{self.names[int(cls)]} {conf:.2f}'
                         color = self.colors[int(cls)]
                         
-                        # Draw bounding box
-                        self.plot_one_box(xyxy, original_img, label=label, color=color, line_thickness=2)
+                        # Draw bounding box on ORIGINAL image (not letterbox)
+                        # Ensure coordinates are integers
+                        x1, y1, x2, y2 = [int(x) for x in xyxy]
+                        
+                        # Draw rectangle directly using cv2 for consistency
+                        cv2.rectangle(original_img, (x1, y1), (x2, y2), color, 2)
+                        
+                        # Add label
+                        label_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                        label_y = y1 - 10 if y1 - 10 > 10 else y1 + 20
+                        
+                        # Draw label background
+                        cv2.rectangle(original_img, 
+                                    (x1, label_y - label_size[1] - 3),
+                                    (x1 + label_size[0], label_y + 3),
+                                    color, -1)
+                        
+                        # Draw label text
+                        cv2.putText(original_img, label, (x1, label_y),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                         
                         # Store detection info
                         x1, y1, x2, y2 = [int(x) for x in xyxy]
@@ -452,6 +470,8 @@ class RiceClassifierStreamlit:
                         })
             
             # Convert back to RGB for display
+            # IMPORTANT: Return the original image with boxes drawn on it
+            # Do NOT return the letterbox processed image
             result_img_rgb = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
             
             return result_img_rgb, detection_results
@@ -782,7 +802,9 @@ def main():
                     )
                 
                 if result_img is not None:
-                    st.image(result_img, caption="Detection Results", use_column_width=True)
+                    # Use PIL Image for better Streamlit Cloud compatibility
+                    pil_img = Image.fromarray(result_img)
+                    st.image(pil_img, caption="Detection Results", use_column_width=True)
                     
                     # Display detection summary
                     summary = create_detection_summary(detections)
