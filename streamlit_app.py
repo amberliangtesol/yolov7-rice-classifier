@@ -788,7 +788,7 @@ def main():
             
             with col1:
                 st.subheader("Original Image")
-                st.image(image, caption="Uploaded Image", use_column_width=True)
+                st.image(image, caption="Uploaded Image", use_container_width=True)
                 
                 # Image info
                 st.text(f"Size: {image.size[0]} x {image.size[1]}")
@@ -805,7 +805,7 @@ def main():
                 
                 if result_img is not None:
                     # Display directly for compatibility
-                    st.image(result_img, caption="Detection Results", use_column_width=True)
+                    st.image(result_img, caption="Detection Results", use_container_width=True)
                     
                     # Display detection summary
                     summary = create_detection_summary(detections)
@@ -1104,7 +1104,7 @@ def main():
             
             col1, col2 = st.columns(2)
             with col1:
-                st.image(image, caption="📱 Captured Image", use_column_width=True)
+                st.image(image, caption="📱 Captured Image", use_container_width=True)
             
             with col2:
                 with st.spinner("🔍 Analyzing image..."):
@@ -1113,7 +1113,7 @@ def main():
                     )
                 
                 if result_img is not None:
-                    st.image(result_img, caption="🎯 Detection Results", use_column_width=True)
+                    st.image(result_img, caption="🎯 Detection Results", use_container_width=True)
                     summary = create_detection_summary(detections)
                     st.markdown(summary)
                 else:
