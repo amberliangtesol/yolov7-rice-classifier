@@ -64,3 +64,24 @@ Thumbs.db
 runs/
 output/
 results/
+
+# Test files
+test_*.py
+test_*.jpg
+test_*.png
+*_test.py
+*_debug.py
+debug_*.py
+verify_*.py
+setup_*.py
+
+# Temporary images
+*.png
+*.jpg
+!assets/*.png
+!assets/*.jpg
+
+# Backup files
+*_backup.py
+*_old.py
+*_cloud.py
