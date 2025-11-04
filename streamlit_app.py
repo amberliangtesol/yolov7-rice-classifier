@@ -710,7 +710,7 @@ def main():
     
     # Header with version
     st.markdown('<h1 class="main-header">🌾 YOLOv7 Rice Type Classifier</h1>', unsafe_allow_html=True)
-    st.caption("Version: 2024.11.04-fix-alignment")
+    st.caption("Version: 2024.11.04-final-v2")
     
     # Sidebar
     with st.sidebar:
