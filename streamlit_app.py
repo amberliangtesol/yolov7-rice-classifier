@@ -802,9 +802,8 @@ def main():
                     )
                 
                 if result_img is not None:
-                    # Use PIL Image for better Streamlit Cloud compatibility
-                    pil_img = Image.fromarray(result_img)
-                    st.image(pil_img, caption="Detection Results", use_column_width=True)
+                    # Display directly for compatibility
+                    st.image(result_img, caption="Detection Results", use_column_width=True)
                     
                     # Display detection summary
                     summary = create_detection_summary(detections)
