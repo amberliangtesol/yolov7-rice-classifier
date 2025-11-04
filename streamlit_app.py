@@ -242,17 +242,9 @@ class RiceClassifierStreamlit:
     
     def preprocess_image(self, img):
         """Preprocess image for inference with letterbox"""
-        # Log original image info
-        print(f"\n{'='*60}")
-        print(f"[PREPROCESS] Original image shape: {img.shape}")
-        print(f"[PREPROCESS] Target size: {self.img_size}")
-        
         # Apply letterbox resize (maintains aspect ratio with padding)
-        img_letterbox, ratio, (dw, dh) = self.letterbox(img, self.img_size, stride=32, auto=True)
-        
-        print(f"[LETTERBOX] Output shape: {img_letterbox.shape}")
-        print(f"[LETTERBOX] Scale ratio: {ratio}")
-        print(f"[LETTERBOX] Padding (dw, dh): ({dw}, {dh})")
+        # Use same parameters as YOLOv7 default
+        img_letterbox = self.letterbox(img, self.img_size, stride=int(self.model.stride.max()), auto=True)[0]
         
         # Convert BGR to RGB and transpose
         img_rgb = img_letterbox[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3xHxW
@@ -263,10 +255,7 @@ class RiceClassifierStreamlit:
         img_tensor = img_tensor.float() / 255.0
         img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension
         
-        print(f"[TENSOR] Final tensor shape: {img_tensor.shape}")
-        print(f"{'='*60}\n")
-        
-        return img_tensor, img_letterbox, ratio, (dw, dh)
+        return img_tensor, img_letterbox
     
     def predict_video_frame(self, frame):
         """Run inference on a single video frame"""
@@ -277,6 +266,7 @@ class RiceClassifierStreamlit:
             result_img, detections = self.predict_image(frame)
             return result_img if result_img is not None else frame, detections
         except Exception as e:
+            print(f"[ERROR] predict_video_frame: {e}")
             return frame, []
     
     def process_video(self, video_path, output_path=None, progress_callback=None):
@@ -424,22 +414,13 @@ class RiceClassifierStreamlit:
             # Convert PIL Image to OpenCV format
             if isinstance(image, Image.Image):
                 img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-                print("[INPUT] Image from PIL Image")
             else:
                 img = image
-                print("[INPUT] Image from OpenCV/numpy array")
             
             original_img = img.copy()
-            original_shape = img.shape[:2]  # HWC
-            
-            print(f"[PREDICT] Original shape (H,W): {original_shape}")
-            print(f"[PREDICT] Original shape full: {img.shape}")
             
             # Preprocess with letterbox
-            img_tensor, img_letterbox, ratio, pad = self.preprocess_image(img)
-            
-            print(f"[PREDICT] Ratio type: {type(ratio)}, Pad type: {type(pad)}")
-            print(f"[PREDICT] Ratio value: {ratio}, Pad value: {pad}")
+            img_tensor, img_letterbox = self.preprocess_image(img)
             
             # Inference
             with torch.no_grad():
@@ -451,17 +432,8 @@ class RiceClassifierStreamlit:
             # Process detections
             for i, det in enumerate(pred):
                 if len(det):
-                    print(f"\n[DETECTION {i}] Found {len(det)} objects")
-                    print(f"[DETECTION {i}] Before scaling - First box: {det[0, :4].tolist()}")
-                    print(f"[DETECTION {i}] img_tensor.shape[2:]: {img_tensor.shape[2:]}")
-                    print(f"[DETECTION {i}] original_shape: {original_shape}")
-                    print(f"[DETECTION {i}] ratio_pad: {(ratio, pad)}")
-                    
-                    # Rescale boxes from letterbox size to original image size
-                    # Let scale_coords calculate the transformation itself for correct results
-                    det[:, :4] = self.scale_coords(img_tensor.shape[2:], det[:, :4], original_shape).round()
-                    
-                    print(f"[DETECTION {i}] After scaling - First box: {det[0, :4].tolist()}")
+                    # Rescale boxes from img_size to im0 size (same as YOLOv7 detect.py)
+                    det[:, :4] = self.scale_coords(img_tensor.shape[2:], det[:, :4], original_img.shape).round()
                     
                     # Draw boxes and labels
                     for *xyxy, conf, cls in reversed(det):
