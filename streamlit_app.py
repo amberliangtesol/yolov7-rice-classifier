@@ -218,6 +218,7 @@ class RiceClassifierStreamlit:
             from utils.general import check_img_size, non_max_suppression, scale_coords
             from utils.plots import plot_one_box
             from utils.torch_utils import select_device
+            from utils.datasets import letterbox
             
             # Store functions for later use
             self.attempt_load = attempt_load
@@ -225,6 +226,7 @@ class RiceClassifierStreamlit:
             self.non_max_suppression = non_max_suppression
             self.scale_coords = scale_coords
             self.plot_one_box = plot_one_box
+            self.letterbox = letterbox
             
             # Load model
             model = attempt_load(self.weights_path, map_location=self.device)
@@ -239,19 +241,20 @@ class RiceClassifierStreamlit:
             return None
     
     def preprocess_image(self, img):
-        """Preprocess image for inference"""
-        # Resize image
-        img_resized = cv2.resize(img, (self.img_size, self.img_size))
+        """Preprocess image for inference with letterbox"""
+        # Apply letterbox resize (maintains aspect ratio with padding)
+        img_letterbox, ratio, (dw, dh) = self.letterbox(img, self.img_size, stride=32, auto=True)
         
-        # Convert BGR to RGB
-        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+        # Convert BGR to RGB and transpose
+        img_rgb = img_letterbox[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3xHxW
+        img_rgb = np.ascontiguousarray(img_rgb)
         
-        # Normalize and convert to tensor
+        # Convert to tensor and normalize
         img_tensor = torch.from_numpy(img_rgb).to(self.device)
         img_tensor = img_tensor.float() / 255.0
-        img_tensor = img_tensor.permute(2, 0, 1).unsqueeze(0)
+        img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension
         
-        return img_tensor, img_resized
+        return img_tensor, img_letterbox, ratio, (dw, dh)
     
     def predict_video_frame(self, frame):
         """Run inference on a single video frame"""
@@ -413,10 +416,10 @@ class RiceClassifierStreamlit:
                 img = image
             
             original_img = img.copy()
-            h, w = img.shape[:2]
+            original_shape = img.shape[:2]  # HWC
             
-            # Preprocess
-            img_tensor, img_resized = self.preprocess_image(img)
+            # Preprocess with letterbox
+            img_tensor, img_letterbox, ratio, pad = self.preprocess_image(img)
             
             # Inference
             with torch.no_grad():
@@ -428,8 +431,9 @@ class RiceClassifierStreamlit:
             # Process detections
             for i, det in enumerate(pred):
                 if len(det):
-                    # Rescale boxes to original image size
-                    det[:, :4] = self.scale_coords(img_resized.shape, det[:, :4], (h, w)).round()
+                    # Rescale boxes from letterbox size to original image size
+                    # Pass ratio_pad for correct coordinate transformation
+                    det[:, :4] = self.scale_coords(img_tensor.shape[2:], det[:, :4], original_shape, ratio_pad=(ratio, pad)).round()
                     
                     # Draw boxes and labels
                     for *xyxy, conf, cls in reversed(det):
