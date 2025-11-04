@@ -243,8 +243,8 @@ class RiceClassifierStreamlit:
     def preprocess_image(self, img):
         """Preprocess image for inference with letterbox"""
         # Apply letterbox resize (maintains aspect ratio with padding)
-        # Use same parameters as YOLOv7 default
-        img_letterbox = self.letterbox(img, self.img_size, stride=int(self.model.stride.max()), auto=True)[0]
+        # IMPORTANT: Keep ALL return values for proper coordinate transformation
+        img_letterbox, ratio, pad = self.letterbox(img, self.img_size, stride=int(self.model.stride.max()), auto=True)
         
         # Convert BGR to RGB and transpose
         img_rgb = img_letterbox[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3xHxW
@@ -255,7 +255,8 @@ class RiceClassifierStreamlit:
         img_tensor = img_tensor.float() / 255.0
         img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension
         
-        return img_tensor, img_letterbox
+        # Return tensor and letterbox parameters for coordinate mapping
+        return img_tensor, img_letterbox, ratio, pad
     
     def predict_video_frame(self, frame):
         """Run inference on a single video frame"""
@@ -419,8 +420,8 @@ class RiceClassifierStreamlit:
             
             original_img = img.copy()
             
-            # Preprocess with letterbox
-            img_tensor, img_letterbox = self.preprocess_image(img)
+            # Preprocess with letterbox (now returns ratio and pad for alignment)
+            img_tensor, img_letterbox, ratio, pad = self.preprocess_image(img)
             
             # Inference
             with torch.no_grad():
@@ -707,8 +708,9 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
 def main():
     """Main Streamlit application"""
     
-    # Header
+    # Header with version
     st.markdown('<h1 class="main-header">🌾 YOLOv7 Rice Type Classifier</h1>', unsafe_allow_html=True)
+    st.caption("Version: 2024.11.04-fix-alignment")
     
     # Sidebar
     with st.sidebar:
