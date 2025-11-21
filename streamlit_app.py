@@ -29,34 +29,956 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Add custom CSS
+# Enterprise-grade professional styling
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 3rem;
-        color: #2E7D32;
-        text-align: center;
-        margin-bottom: 2rem;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    /* Global Reset & Base Styles */
+    .stApp {
+        background: #f7f9fc;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #1a1a1a;
+        line-height: 1.6;
     }
-    .metric-card {
-        background-color: #f0f2f6;
+    
+    /* Remove default Streamlit padding */
+    .main .block-container {
+        padding: 2rem 1rem 3rem 1rem;
+        max-width: 100%;
+    }
+    
+    /* Professional Header */
+    .enterprise-header {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .enterprise-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #065f46 0%, #059669 25%, #10b981 50%, #fbbf24 100%);
+    }
+    
+    .main-title {
+        font-size: 2.75rem;
+        font-weight: 800;
+        color: #111827;
+        text-align: center;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+    
+    .main-subtitle {
+        font-size: 1.125rem;
+        color: #6b7280;
+        text-align: center;
+        font-weight: 400;
+        margin: 0;
+    }
+    
+    /* Status Bar */
+    .status-bar {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
         padding: 1rem;
-        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+    }
+    
+    .status-badge {
+        background: #dcfce7;
+        color: #166534;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    /* Professional Cards */
+    .pro-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .pro-card:hover {
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        transform: translateY(-1px);
+    }
+    
+    .card-header {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 1rem 0;
+        padding: 0 0 0.75rem 0;
+        border-bottom: 2px solid #f3f4f6;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Navigation Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.25rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        gap: 0.25rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #6b7280;
+        border: none;
+        border-radius: 8px;
+        padding: 0.875rem 1.5rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background: #f9fafb;
+        color: #374151;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: #10b981 !important;
+        color: white !important;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+    
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        transform: translateY(-1px);
+    }
+    
+    /* Form Inputs */
+    .stSelectbox > div > div,
+    .stNumberInput > div > div > input,
+    .stTextInput > div > div > input {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+    
+    .stSelectbox > div > div:focus-within,
+    .stNumberInput > div > div > input:focus,
+    .stTextInput > div > div > input:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    
+    /* File Uploader */
+    .stFileUploader > div > div > div {
+        background: white;
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 3rem 2rem;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+    
+    .stFileUploader > div > div > div:hover {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+    
+    /* Enhanced Slider Styling for Configuration Cards */
+    .stSlider {
+        padding: 0;
+        background: transparent;
+        border: none;
+        margin: 0.75rem 0;
+    }
+    
+    /* Slider Track */
+    .stSlider > div > div > div {
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 10px;
+        height: 6px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    /* Slider Fill - Dynamic based on slider context */
+    .stSlider > div > div > div > div {
+        background: linear-gradient(90deg, #059669 0%, #047857 100%);
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(5, 150, 105, 0.4);
+        height: 6px;
+    }
+    
+    /* Slider Thumb */
+    .stSlider > div > div > div > div > div {
+        background: white;
+        border: 3px solid #059669;
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        top: -6px;
+    }
+    
+    .stSlider > div > div > div > div > div:hover {
+        transform: scale(1.15);
+        box-shadow: 0 3px 8px rgba(5, 150, 105, 0.5);
+        border-width: 4px;
+    }
+    
+    .stSlider > div > div > div > div > div:active {
+        transform: scale(0.95);
+        box-shadow: 0 1px 3px rgba(5, 150, 105, 0.6);
+    }
+    
+    /* Slider Labels - Hidden since we use custom labels */
+    .stSlider > label {
+        display: none;
+    }
+    
+    /* Remove any default margins */
+    .stSlider > div {
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Metrics */
+    .css-1629p8f [data-testid="metric-container"] {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .css-1629p8f [data-testid="metric-container"] [data-testid="metric-value"] {
+        color: #10b981;
+        font-weight: 700;
+        font-size: 2rem;
+    }
+    
+    .css-1629p8f [data-testid="metric-container"] [data-testid="metric-label"] {
+        color: #6b7280;
+        font-weight: 500;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    /* Alert Messages */
+    .stAlert > div {
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+    }
+    
+    .stSuccess > div {
+        background: #f0fdf4;
+        color: #166534;
+        border-left: 4px solid #10b981;
+    }
+    
+    .stWarning > div {
+        background: #fefce8;
+        color: #a16207;
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .stError > div {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-left: 4px solid #ef4444;
+    }
+    
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+        color: #111827;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+    
+    h1 { font-size: 2.25rem; }
+    h2 { font-size: 1.875rem; }
+    h3 { font-size: 1.5rem; }
+    h4 { font-size: 1.25rem; }
+    
+    .stMarkdown {
+        color: #374151;
+        line-height: 1.6;
+    }
+    
+    /* Utility Classes */
+    .text-success { color: #10b981; }
+    .text-warning { color: #f59e0b; }
+    .text-error { color: #ef4444; }
+    .text-muted { color: #6b7280; }
+    
+    .bg-success {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .bg-warning {
+        background: #fefce8;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    /* Results Display */
+    .result-container {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .result-header {
+        background: #f9fafb;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .result-content {
+        padding: 1.5rem;
+    }
+    
+    /* Detection Cards */
+    .detection-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        transition: all 0.2s ease;
+    }
+    
+    .detection-card:hover {
+        background: #f3f4f6;
+        border-color: #10b981;
+    }
+    
+    /* Progress Bar */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, #10b981 0%, #f59e0b 100%);
+        border-radius: 4px;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .main-title {
+            font-size: 2rem;
+        }
+        
+        .enterprise-header {
+            padding: 2rem 1rem;
+        }
+        
+        .status-bar {
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+        
+        .pro-card {
+            padding: 1rem;
+        }
+    }
+    
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: white;
+        padding: 1rem;
+    }
+    
+    .sidebar-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+    }
+    
+    .sidebar-section {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .sidebar-section h3 {
+        color: #10b981;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    /* Bento Box Dashboard Grid */
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-auto-rows: minmax(200px, auto);
+        gap: 1.5rem;
+    }
+    
+    .bento-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .bento-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+    
+    .bento-card.large {
+        grid-column: span 2;
+    }
+    
+    .bento-card.tall {
+        grid-row: span 2;
+    }
+    
+    .bento-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 1rem;
+    }
+    
+    .bento-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .bento-subtitle {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+    
+    .bento-metric {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #10b981;
+        line-height: 1;
+        margin: 1rem 0;
+    }
+    
+    .bento-badge {
+        background: white;
+        color: #10b981;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Dashboard Status Cards */
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .status-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .status-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #f59e0b 100%);
+    }
+    
+    .status-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1e293b;
         margin: 0.5rem 0;
     }
-    .status-box {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
-        border-left: 4px solid #2E7D32;
-        background-color: #f8f9fa;
+    
+    .status-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
-    .detection-result {
-        border: 2px solid #4CAF50;
-        border-radius: 0.5rem;
+    
+    /* Analysis Timeline */
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .timeline-item:last-child {
+        border-bottom: none;
+    }
+    
+    .timeline-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #10b981;
+        flex-shrink: 0;
+    }
+    
+    .timeline-content {
+        flex: 1;
+    }
+    
+    .timeline-time {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+    
+    /* Remove Streamlit branding and default styling */
+    #MainMenu, .stDeployButton, footer, header {
+        visibility: hidden !important;
+    }
+    
+    /* Remove Streamlit default emotion cache styling */
+    .st-emotion-cache-1wf904r,
+    .e1gk92lc0,
+    .st-emotion-cache-17lr0tt,
+    .e1lln2w81,
+    .st-emotion-cache-1r4qj8v,
+    .e1akgbir4 {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    /* Style specific emotion cache classes with white background */
+    .st-emotion-cache-8atqhb,
+    .e1mlolmg0,
+    .en45cdb5 {
+        background: white !important;
+        margin: 1rem 0 0 0 !important;
+        padding: 1.5rem !important;
+        border: none !important;
+        border-bottom: none !important;
+        border-radius: 20px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+        outline: none !important;
+    }
+    
+    .st-emotion-cache-mv7iac,
+    .e16xj5sw0 {
+        background: white !important;
+        border-radius: 0 0 20px 20px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        border-bottom: none !important;
+        border-top: none !important;
+    }
+    
+    /* Hide labels in file uploader */
+    .st-emotion-cache-mv7iac label,
+    .e16xj5sw0 label,
+    .st-emotion-cache-1wf904r,
+    .e1gk92lc0,
+    .st-emotion-cache-1xgtwnd,
+    .edtmxes10 {
+        display: none !important;
+    }
+    
+    /* Hide specific empty containers */
+    .stElementContainer.element-container.st-emotion-cache-17lr0tt.e1lln2w81:empty {
+        display: none !important;
+    }
+    
+    /* Remove unnecessary borders and lines within file uploader */
+    .st-emotion-cache-8atqhb hr,
+    .e1mlolmg0 hr,
+    .st-emotion-cache-mv7iac hr,
+    .e16xj5sw0 hr {
+        display: none !important;
+    }
+    
+    /* Remove any bottom borders from containers */
+    .st-emotion-cache-8atqhb > div,
+    .e1mlolmg0 > div,
+    .st-emotion-cache-mv7iac > div,
+    .e16xj5sw0 > div {
+        border-bottom: none !important;
+        border-top: none !important;
+    }
+    
+    /* Ensure file uploader container has smooth bottom radius */
+    [data-testid="stFileUploader"] {
+        border-bottom: none !important;
+    }
+    
+    [data-testid="stFileUploader"] > div {
+        border-bottom: none !important;
+        border-radius: 0 0 20px 20px !important;
+    }
+    
+    /* Clean up container spacing */
+    .element-container {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Override Streamlit's default container styles */
+    .stElementContainer {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+    
+    /* Remove default block container styling */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+    }
+    
+    /* Force file uploader to be inside bento cards */
+    .bento-card .stFileUploader {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Ensure all streamlit components stay within bento card bounds */
+    .bento-card > div > [data-testid="element-container"] {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Override any absolute positioning that might take elements out of flow */
+    .bento-card * {
+        position: relative !important;
+    }
+    
+    /* Force all Streamlit file uploaders to stay within their parent containers */
+    [data-testid="stFileUploader"] {
+        background: transparent !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        display: block !important;
+    }
+    
+    /* Hide the main app container's padding to let bento cards control layout */
+    .main > div {
+        padding: 0 !important;
+    }
+    
+    /* Ensure all elements stay within the bento grid */
+    .bento-card .stFileUploader,
+    .bento-card .stButton,
+    .bento-card .stImage,
+    .bento-card .stMarkdown {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Specifically target file uploader containers */
+    .bento-card [data-testid="stFileUploader"] > div {
+        margin: 0 !important;
+        padding: 1rem !important;
+        border: 2px dashed #d1d5db !important;
+        border-radius: 12px !important;
+        background: white !important;
+    }
+    
+    /* Super aggressive file uploader containment */
+    .bento-card.large [data-testid="stFileUploader"],
+    .bento-card.large .st-emotion-cache-8atqhb,
+    .bento-card.large .e1mlolmg0 {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+        margin: 1rem 0 !important;
+        padding: 0 !important;
+        float: none !important;
+        clear: both !important;
+        box-sizing: border-box !important;
+        z-index: 1 !important;
+    }
+    
+    /* Show all file uploaders but ensure they're positioned correctly */
+    
+    /* New approach - Style containers to look like bento cards */
+    .bento-card-header.large-card-header {
+        background: linear-gradient(135deg, #065f46, #059669, #10b981, #fbbf24);
+        border-radius: 20px 20px 0 0;
+        padding: 1.5rem 1.5rem 0 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 0;
+        position: relative;
+        color: white;
+    }
+    
+    .bento-card-header.large-card-header:first-child {
+        grid-column: span 2;
+    }
+    
+    .bento-card-header.large-card-header .bento-title {
+        color: white !important;
+    }
+    
+    .bento-card-header.large-card-header .bento-subtitle {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* Style the container that follows the header to complete the card */
+    .large-card-header + div {
+        background: white !important;
+        border-radius: 0 0 20px 20px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        border-top: none !important;
+        margin-top: 0 !important;
+        margin-bottom: 2rem !important;
+    }
+    
+    /* Ensure file uploader fits nicely within the styled container */
+    .large-card-header + div [data-testid="stFileUploader"] {
+        background: transparent !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .large-card-header + div [data-testid="stFileUploader"] > div > div > div {
+        background: #f8fafc !important;
+        border: 2px dashed #d1d5db !important;
+        border-radius: 12px !important;
+        padding: 2rem !important;
+        text-align: center !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .large-card-header + div [data-testid="stFileUploader"] > div > div > div:hover {
+        border-color: #10b981 !important;
+        background: #f0fdf4 !important;
+    }
+    
+    /* Force the file uploader to display within padding area */
+    .bento-card div[style*="padding: 1rem"] [data-testid="stFileUploader"] {
+        position: static !important;
+        display: block !important;
+        margin: 1rem 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Override any absolute positioning on file uploader elements */
+    .bento-card * {
+        position: relative !important;
+        float: none !important;
+    }
+    
+    .bento-card .element-container,
+    .bento-card .stElementContainer {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    
+    /* Enhanced Sidebar Styling */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        border-right: 2px solid #e2e8f0;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.05);
+        padding-top: 2rem;
+    }
+    
+    /* Simplified sidebar sections */
+    .sidebar-section {
+    }
+    
+    .sidebar-header {
+        background: linear-gradient(135deg, #065f46, #10b981);
+        color: white;
         padding: 1rem;
-        margin: 1rem 0;
-        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin: 0;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .analytics-metrics {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .metric-mini {
+        background: #f8fafc;
+        padding: 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+    
+    .metric-mini .metric-label {
+        color: #6b7280;
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .metric-mini .metric-value {
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    /* Enhanced expander/collapse button styling */
+    .streamlit-expander .streamlit-expanderHeader {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%) !important;
+        border: 2px solid #bbf7d0 !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1rem !important;
+        font-weight: 600 !important;
+        color: #065f46 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .streamlit-expander .streamlit-expanderHeader:hover {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        border-color: #059669 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+    }
+    
+    /* Make the expand/collapse arrow more prominent */
+    .streamlit-expander .streamlit-expanderHeader svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+        color: #10b981 !important;
+    }
+    
+    .streamlit-expander .streamlit-expanderHeader:hover svg {
+        color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -708,484 +1630,342 @@ def process_video_interface(video_file, conf_threshold, iou_threshold, progress_
 def main():
     """Main Streamlit application"""
     
-    # Header with version
-    st.markdown('<h1 class="main-header">🌾 YOLOv7 Rice Type Classifier</h1>', unsafe_allow_html=True)
-    st.caption("Version: 2024.11.04-final-v2")
-    
-    # Sidebar
+    # Sidebar Configuration
     with st.sidebar:
-        st.header("⚙️ Configuration")
-        
-        # Model settings
-        st.subheader("Model Settings")
-        conf_threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.25, 0.05)
-        iou_threshold = st.slider("IoU Threshold", 0.1, 1.0, 0.45, 0.05)
-        
-        # Model info
-        st.subheader("📊 Model Information")
-        st.info("""
-        **Architecture**: YOLOv7
-        **Classes**: 4 (white_rice, thi_rice, brown_rice, black_rice)
-        **Input Size**: 640x640
-        **Format**: PyTorch (.pt)
-        """)
-        
-        # Legend
-        st.subheader("🏷️ Class Legend")
         st.markdown("""
-        - ⚪ **White Rice**: Regular white rice
-        - 🟡 **Thi Rice**: Thai jasmine rice
-        - 🟤 **Brown Rice**: Whole grain brown rice
-        - ⚫ **Black Rice**: Black glutinous rice
-        """)
+        <div class="sidebar-header">
+            <h2 style="margin: 0; font-size: 1.25rem;">⚙️ Model Configuration</h2>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # System info
-        st.subheader("🖥️ System Info")
-        try:
-            device = "CUDA" if torch.cuda.is_available() else "CPU"
-            st.text(f"Device: {device}")
-            st.text(f"PyTorch: {torch.__version__}")
-        except:
-            st.text("System info unavailable")
-    
-    # Check if model can be loaded
-    classifier_obj, status = load_classifier()
-    
-    if classifier_obj is None:
-        st.error(f"❌ {status}")
-        st.info("""
-        **Model Loading Issue**: The YOLOv7 model couldn't be loaded. This might be due to:
-        - Missing model file (best.pt)
-        - Missing dependencies
-        - Cloud environment limitations
-        
-        **What you can do**:
-        1. Check that `models/best.pt` exists
-        2. Verify all dependencies are installed
-        3. Try refreshing the page
-        """)
-        return
-    else:
-        st.success(f"✅ {status}")
-    
-    # Main content tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📷 Image Upload", "📹 Video Processing", "📸 Live Camera", "📊 Batch Analysis"])
-    
-    with tab1:
-        st.header("📷 Image Upload Classification")
-        
-        uploaded_file = st.file_uploader(
-            "Choose an image file",
-            type=['png', 'jpg', 'jpeg'],
-            help="Upload an image of rice grains for quality classification"
-        )
-        
-        if uploaded_file is not None:
-            # Display original image
-            image = Image.open(uploaded_file)
+        # Configuration Section
+        with st.container():
+            st.markdown("""
+            <div class="sidebar-section">
+                <h3>🎯 Detection Settings</h3>
+            """, unsafe_allow_html=True)
             
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("Original Image")
-                st.image(image, caption="Uploaded Image", use_container_width=True)
-                
-                # Image info
-                st.text(f"Size: {image.size[0]} x {image.size[1]}")
-                st.text(f"Format: {image.format}")
-            
-            with col2:
-                st.subheader("Detection Results")
-                
-                # Run prediction
-                with st.spinner("🔍 Analyzing image..."):
-                    result_img, detections = predict_image_interface(
-                        image, conf_threshold, iou_threshold
-                    )
-                
-                if result_img is not None:
-                    # Display directly for compatibility
-                    st.image(result_img, caption="Detection Results", use_container_width=True)
-                    
-                    # Display detection summary
-                    summary = create_detection_summary(detections)
-                    st.markdown(summary)
-                    
-                    # Detailed results
-                    if detections:
-                        with st.expander(f"📋 Detailed Results ({len(detections)} detections)"):
-                            for i, det in enumerate(detections):
-                                emoji = {'white_rice': '⚪', 'thi_rice': '🟡', 'brown_rice': '🟤', 'black_rice': '⚫'}[det['class']]
-                                st.write(f"{emoji} **Detection {i+1}**: {det['class']} (confidence: {det['confidence']:.3f})")
-                                st.write(f"   📍 Bounding box: ({det['bbox'][0]}, {det['bbox'][1]}) to ({det['bbox'][2]}, {det['bbox'][3]})")
-                else:
-                    st.error(f"❌ Prediction failed: {detections}")
-    
-    with tab2:
-        st.header("📹 Video Processing")
-        
-        uploaded_video = st.file_uploader(
-            "Choose a video file",
-            type=['mp4', 'avi', 'mov'],
-            help="Upload a video file for rice grain detection"
-        )
-        
-        if uploaded_video is not None:
-            st.video(uploaded_video)
-            
-            if st.button("🎬 Process Video"):
-                # Create placeholders for progress tracking
-                progress_placeholder = st.empty()
-                status_placeholder = st.empty()
-                
-                # Show initial progress
-                progress_placeholder.progress(0)
-                status_placeholder.info("🔄 初始化視頻處理...")
-                
-                # Process video with progress tracking
-                detections, status, processed_video_bytes, output_video_path = process_video_interface(
-                    uploaded_video, conf_threshold, iou_threshold,
-                    progress_placeholder, status_placeholder
-                )
-                
-                # Clear progress indicators when done
-                progress_placeholder.empty()
-                status_placeholder.empty()
-                
-                if detections is not None:
-                    st.success(f"✅ {status}")
-                    
-                    # Display processed video with detections
-                    if output_video_path and os.path.exists(output_video_path):
-                        st.subheader("🎥 Processed Video with Detections")
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.markdown("**📤 Original Video**")
-                            st.video(uploaded_video)
-                        
-                        with col2:
-                            st.markdown("**🎯 Detection Results Video**")
-                            
-                            # 使用檔案路徑 + H.264 轉碼的簡化方式
-                            try:
-                                # 1) 檢查原始偵測輸出是否完成
-                                if output_video_path and os.path.exists(output_video_path):
-                                    file_size_mb = os.path.getsize(output_video_path) / (1024 * 1024)
-                                    # Video processing completed
-                                    
-                                    # 2) 轉換 H.264 以確保 HTML5 可播
-                                    h264_path = to_h264(output_video_path)
-                                    
-                                    if h264_path and os.path.exists(h264_path):
-                                        # H.264 conversion completed
-                                        
-                                        # 顯示視頻元數據以診斷瀏覽器兼容性
-                                        meta = ffprobe_json(h264_path)
-                                        if meta.get("streams"):
-                                            # Video metadata available for debugging
-                                            pass
-                                        
-                                        # 3) 用檔案路徑做預覽（比 bytes 穩）
-                                        st.video(h264_path)
-                                        # Video preview loaded successfully
-                                        
-                                        # 4) 下載按鈕用轉好的 H.264
-                                        with open(h264_path, 'rb') as f:
-                                            h264_bytes = f.read()
-                                        
-                                        st.download_button(
-                                            label="📥 Download Processed Video (H.264)",
-                                            data=h264_bytes,
-                                            file_name="rice_detection_h264.mp4",
-                                            mime="video/mp4"
-                                        )
-                                    else:
-                                        # H.264 轉換失敗，顯示原始視頻的元數據診斷信息
-                                        meta = ffprobe_json(output_video_path)
-                                        if meta.get("streams"):
-                                            st.write("🎛️ 原始視頻 metadata (診斷為何轉換失敗)：", meta.get("streams", []))
-                                        
-                                        # 直接提供下載按鈕
-                                        with open(output_video_path, 'rb') as f:
-                                            original_bytes = f.read()
-                                        
-                                        st.download_button(
-                                            label="📥 Download Processed Video",
-                                            data=original_bytes,
-                                            file_name="rice_detection_video.mp4",
-                                            mime="video/mp4"
-                                        )
-                                else:
-                                    st.error("❌ 視頻檔案路徑無效或檔案不存在")
-                                    
-                            except Exception as e:
-                                st.error(f"❌ 視頻預覽失敗: {str(e)}")
-                                # 緊急備用方案
-                                if processed_video_bytes:
-                                    st.warning("🔄 使用備用預覽方式...")
-                                    st.video(processed_video_bytes)
-                                    
-                                    st.download_button(
-                                        label="📥 Download Processed Video (Backup)",
-                                        data=processed_video_bytes,
-                                        file_name="rice_detection_backup.mp4",
-                                        mime="video/mp4"
-                                    )
-                    else:
-                        st.warning("⚠️ 處理後的視頻未能正確生成。請檢查輸入視頻格式。")
-                    
-                    # Video analysis summary
-                    if detections:
-                        st.subheader("📊 Video Analysis Results")
-                        
-                        # Count detections by class
-                        class_counts = {'white_rice': 0, 'thi_rice': 0, 'brown_rice': 0, 'black_rice': 0}
-                        frame_count = 0
-                        if detections:
-                            frame_count = max([d.get('frame', 0) for d in detections]) + 1
-                            for det in detections:
-                                class_counts[det['class']] += 1
-                        
-                        # Display metrics
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            st.metric("Total Frames", frame_count)
-                        with col2:
-                            st.metric("⚪ White Rice", class_counts['white_rice'])
-                        with col3:
-                            st.metric("🟡 Thi Rice", class_counts['thi_rice'])
-                        with col4:
-                            st.metric("🟤 Brown Rice", class_counts['brown_rice'])
-                        with col5:
-                            st.metric("⚫ Black Rice", class_counts['black_rice'])
-                        
-                        # Detection timeline
-                        if len(detections) > 0:
-                            with st.expander("📈 Detection Timeline"):
-                                import pandas as pd
-                                df = pd.DataFrame(detections)
-                                if 'timestamp' in df.columns:
-                                    st.line_chart(df.groupby(['timestamp', 'class']).size().unstack(fill_value=0))
-                    else:
-                        st.info("No rice grains detected in the video.")
-                else:
-                    st.error(f"❌ Video processing failed: {status}")
-    
-    with tab3:
-        st.header("📸 Live Camera")
-        
-        # Check if model can be loaded
-        classifier_obj, status = load_classifier()
-        
-        if classifier_obj is not None:
-            st.info("🎥 Live camera detection with YOLOv7")
-            
-            # Camera settings
-            st.subheader("⚙️ Camera Settings")
-            col1, col2 = st.columns(2)
-            with col1:
-                camera_conf = st.slider("Camera Confidence", 0.1, 1.0, conf_threshold, 0.05, key="camera_conf")
-            with col2:
-                camera_iou = st.slider("Camera IoU", 0.1, 1.0, iou_threshold, 0.05, key="camera_iou")
-            
-            # WebRTC streamer  
-            video_transformer = VideoTransformer()
-            if classifier_obj is not None:
-                video_transformer.set_classifier(classifier_obj, camera_conf, camera_iou)
-            
-            # Simplified WebRTC configuration for cloud deployment
-            # Using camelCase and minimal servers for faster connection
-            rtc_config = {
-                "iceServers": [
-                    # Single reliable STUN server
-                    {"urls": "stun:stun.l.google.com:19302"},
-                    # Single TURN server for cloud NAT traversal
-                    {
-                        "urls": "turn:openrelay.metered.ca:80",
-                        "username": "openrelayproject",
-                        "credential": "openrelayproject"
-                    }
-                ]
-            }
-            
-            webrtc_ctx = webrtc_streamer(
-                key="rice-detection",
-                video_processor_factory=lambda: video_transformer,
-                rtc_configuration=rtc_config,
-                media_stream_constraints={
-                    "video": {
-                        "width": {"min": 640, "ideal": 1280, "max": 1920},
-                        "height": {"min": 480, "ideal": 720, "max": 1080},
-                        "frameRate": {"min": 10, "ideal": 15, "max": 30},
-                        "facingMode": "environment"  # Use rear camera on mobile devices
-                    },
-                    "audio": False
-                },
-                async_processing=True,
+            conf_threshold = st.slider(
+                "Detection Confidence", 
+                min_value=0.1, 
+                max_value=1.0, 
+                value=0.25, 
+                step=0.05,
+                help="Minimum confidence score for valid object detection"
             )
             
-            # Connection status
-            if webrtc_ctx.state.playing:
-                st.success("🟢 Camera connected successfully!")
-            elif webrtc_ctx.state.signalling:
-                st.info("🔄 Connecting to camera...")
-            else:
-                st.warning("⚠️ Camera not connected. Click START to begin.")
+            iou_threshold = st.slider(
+                "IoU Threshold", 
+                min_value=0.1, 
+                max_value=1.0, 
+                value=0.45, 
+                step=0.05,
+                help="Non-maximum suppression threshold for overlapping detections"
+            )
             
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        # Model Status Section
+        with st.container():
             st.markdown("""
-            **📱 How to use Live Camera:**
-            1. Click "START" to begin camera detection
-            2. Allow browser camera access when prompted
-            3. **📱 Mobile users**: App automatically uses rear camera for better rice grain capture
-            4. Position rice grains in front of camera
-            5. Adjust confidence/IoU thresholds as needed
-            6. Click "STOP" when finished
+            <div class="sidebar-section">
+                <h3>📊 System Status</h3>
+            """, unsafe_allow_html=True)
             
-            **🔧 Connection Troubleshooting (雲端部署專用):**
-            - 如果顯示 "Connection is taking longer than expected" → 正常現象，雲端環境需要TURN服務器
-            - Use **Chrome** or **Firefox** browser (必須HTTPS環境)
-            - Ensure camera permission is granted
-            - 公司/學校網路可能會封鎖：嘗試用手機4G測試
-            - Try refreshing the page if connection fails
-            - **Cloud deployment**: 已自動配置多個免費TURN服務器
-            """)
+            # Check if model can be loaded
+            classifier_obj, status = load_classifier()
             
-            # Enhanced connection diagnostics
-            with st.expander("🛠️ Advanced Connection Settings & Diagnostics"):
-                st.markdown("""
-                **✅ Enhanced Cloud-Ready STUN/TURN Configuration:**
-                
-                **STUN Servers (NAT discovery):**
-                - Google STUN: stun.l.google.com:19302 (+ 4 backup servers)
-                - Mozilla STUN: stun.services.mozilla.com
-                - Cloudflare STUN: stun.cloudflare.com:3478
-                - NextCloud STUN: stun.nextcloud.com:443
-                
-                **TURN Servers (Relay for cloud deployment):**
-                - 🌐 Metered.ca: openrelay.metered.ca (UDP/TCP 80, 443)
-                - 🌐 Global Relay: global.relay.metered.ca (UDP/TCP 80, 443)
-                - 🌐 Backup Relay: relay.backups.cz (UDP/TCP 443)
-                
-                **🔧 Debugging Steps:**
-                1. **Open Browser DevTools** (F12) → Console tab
-                2. Look for ICE connection state messages
-                3. If you see "ICE failed" or "ICE closed" → TURN server issue
-                4. **For developers**: Uncomment `ice_transport_policy="relay"` to force TURN
-                
-                **📊 Connection Status Meanings:**
-                - 🟢 **Connected**: WebRTC working perfectly
-                - 🔄 **Signalling**: Negotiating connection (normal for cloud)
-                - ⚠️ **Not connected**: Click START or check permissions
-                - ❌ **Failed**: Check network/firewall settings
-                
-                **Video Quality Settings:**
-                - Resolution: 640x480 to 1920x1080
-                - Frame Rate: 10-30 FPS
-                - Optimized for rice grain detection
-                
-                **If connection still fails:**
-                1. Try using the "📷 Image Upload" tab instead
-                2. Take photos with your phone and upload them
-                3. Use the "📹 Video Processing" for recorded videos
-                """)
-        else:
-            st.error(f"❌ Model loading failed: {status}")
+            if classifier_obj is not None:
+                st.success("✅ Model Loaded")
+                st.markdown(f"""
+                <div style="font-size: 0.875rem; color: rgba(255,255,255,0.8); margin-top: 1rem;">
+                    <strong>Version:</strong> v2024.11.04<br>
+                    <strong>Model:</strong> YOLOv7<br>
+                    <strong>Classes:</strong> 4 Types<br>
+                    <strong>Conf:</strong> {conf_threshold:.2f}<br>
+                    <strong>IoU:</strong> {iou_threshold:.2f}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.error("❌ Model Error")
+                st.markdown(f"<small>{status}</small>", unsafe_allow_html=True)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
         
-        # Simple camera alternative
-        st.markdown("---")
-        st.subheader("📱 Simple Camera Alternative")
-        st.info("💡 **If WebRTC doesn't work**: Use Streamlit's built-in camera!")
-        
-        simple_camera = st.camera_input("📸 Take a photo")
-        if simple_camera is not None:
-            # Process the captured image
-            image = Image.open(simple_camera)
+        # System Analytics Section (收合式)
+        with st.expander("📈 System Analytics", expanded=False):
+            st.markdown("""
+            <div class="sidebar-section">
+                <div class="sidebar-header">📈 System Analytics</div>
+                <div class="analytics-metrics">
+            """, unsafe_allow_html=True)
             
+            # System metrics
             col1, col2 = st.columns(2)
             with col1:
-                st.image(image, caption="📱 Captured Image", use_container_width=True)
+                st.markdown("""
+                <div class="metric-mini">
+                    <div class="metric-label">Model Status</div>
+                    <div class="metric-value">{}</div>
+                </div>
+                """.format("✅ Ready" if classifier_obj is not None else "❌ Error"), unsafe_allow_html=True)
+                
+                st.markdown("""
+                <div class="metric-mini">
+                    <div class="metric-label">Framework</div>
+                    <div class="metric-value">YOLOv7</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col2:
-                with st.spinner("🔍 Analyzing image..."):
-                    result_img, detections = predict_image_interface(
-                        image, conf_threshold, iou_threshold
-                    )
+                st.markdown("""
+                <div class="metric-mini">
+                    <div class="metric-label">Version</div>
+                    <div class="metric-value">v2024.11.04</div>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                if result_img is not None:
-                    st.image(result_img, caption="🎯 Detection Results", use_container_width=True)
-                    summary = create_detection_summary(detections)
-                    st.markdown(summary)
-                else:
-                    st.error(f"❌ Analysis failed: {detections}")
+                st.markdown("""
+                <div class="metric-mini">
+                    <div class="metric-label">Classes</div>
+                    <div class="metric-value">4 Types</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Configuration display
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+                border: 1px solid #bbf7d0;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-top: 1rem;
+                font-size: 0.875rem;
+            ">
+                <strong>🎯 Current Settings:</strong><br>
+                Confidence: {conf_threshold:.2f} | IoU: {iou_threshold:.2f}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("</div></div>", unsafe_allow_html=True)
     
-    with tab4:
-        st.header("📊 Batch Analysis")
-        st.info("📁 Upload multiple images for batch processing with real-time progress tracking!")
+    # Main Dashboard Header
+    st.markdown("""
+    <div class="enterprise-header">
+        <div class="main-title">🌾 YOLOv7 Rice Quality Classifier</div>
+        <div class="main-subtitle">Enterprise-grade AI solution for rice quality analysis and classification</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Bento Box Dashboard Grid
+    st.markdown("""
+    <div class="bento-grid">
+    """, unsafe_allow_html=True)
+    
+    # Check if model can be loaded (simplified for dashboard)
+    classifier_obj, status = load_classifier()
+    model_loaded = classifier_obj is not None
+    
+    # Bento Card 1: Image Analysis - 完整包裝
+    with st.container():
+        # 使用特殊的 CSS class 來模擬 bento card 外觀
+        st.markdown("""
+        <div class="bento-card-header large-card-header">
+            <div class="bento-header">
+                <div>
+                    <div class="bento-title">📷 Image Analysis</div>
+                    <div class="bento-subtitle">Upload and analyze rice grain images</div>
+                </div>
+                <div class="bento-badge">Core Feature</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        uploaded_files = st.file_uploader(
-            "Choose multiple image files",
-            type=['png', 'jpg', 'jpeg'],
-            accept_multiple_files=True,
-            help="Upload multiple images for batch analysis"
-        )
-        
-        if uploaded_files:
-            st.write(f"📁 Uploaded {len(uploaded_files)} images")
-            if st.button("🔄 Process All Images"):
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                results = []
-                start_time = time.time()
+        if model_loaded:
+            # Image Analysis Upload
+            uploaded_file = st.file_uploader(
+                "Upload Image File",
+                type=['png', 'jpg', 'jpeg'],
+                help="Select clear images of rice grains for AI analysis"
+            )
+            
+            if uploaded_file is not None:
+                image = Image.open(uploaded_file)
+                col1, col2 = st.columns(2)
                 
-                for i, file in enumerate(uploaded_files):
-                    # Update status
-                    elapsed = time.time() - start_time
-                    if i > 0:
-                        eta = (elapsed / i) * (len(uploaded_files) - i)
-                        status_text.info(f"📸 處理中: {i+1}/{len(uploaded_files)} ({(i+1)/len(uploaded_files):.1%}) | ⏱️ 已用時間: {elapsed:.1f}s | ⏳ 預估剩餘: {eta:.1f}s")
-                    else:
-                        status_text.info(f"📸 處理中: {i+1}/{len(uploaded_files)} ({(i+1)/len(uploaded_files):.1%})")
-                    
-                    image = Image.open(file)
-                    result_img, detections = predict_image_interface(
-                        image, conf_threshold, iou_threshold
-                    )
+                with col1:
+                    st.image(image, caption="Original Image", use_container_width=True)
+                
+                with col2:
+                    with st.spinner("🔍 Analyzing..."):
+                        result_img, detections = predict_image_interface(
+                            image, conf_threshold, iou_threshold
+                        )
                     
                     if result_img is not None:
-                        results.append({
-                            'filename': file.name,
-                            'detections': len(detections),
-                            'white_rice': len([d for d in detections if d['class'] == 'white_rice']),
-                            'thi_rice': len([d for d in detections if d['class'] == 'thi_rice']),
-                            'brown_rice': len([d for d in detections if d['class'] == 'brown_rice']),
-                            'black_rice': len([d for d in detections if d['class'] == 'black_rice'])
-                        })
-                    
-                    progress_bar.progress((i + 1) / len(uploaded_files))
+                        st.image(result_img, caption="Analysis Results", use_container_width=True)
+                        summary = create_detection_summary(detections)
+                        st.markdown(summary)
+                    else:
+                        st.error(f"Analysis failed: {detections}")
+        else:
+            st.info("🚫 Model not loaded. Check sidebar for status.")
+    
+    # Bento Card 2: Video Processing
+    with st.container():
+        st.markdown("""
+        <div class="bento-card-header large-card-header">
+            <div class="bento-header">
+                <div>
+                    <div class="bento-title">📹 Video Processing</div>
+                    <div class="bento-subtitle">Process videos with detection overlay</div>
+                </div>
+                <div class="bento-badge">Advanced</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if model_loaded:
+            uploaded_video = st.file_uploader(
+                "Upload Video File",
+                type=['mp4', 'avi', 'mov'],
+                help="Upload video for rice grain detection"
+            )
+            
+            if uploaded_video is not None:
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.video(uploaded_video)
                 
-                # Clear progress indicators
-                status_text.empty()
+                with col2:
+                    if st.button("🎬 Process Video", use_container_width=True):
+                        with st.spinner("Processing video..."):
+                            detections, status, _, output_path = process_video_interface(
+                                uploaded_video, conf_threshold, iou_threshold
+                            )
+                        
+                        if detections is not None:
+                            st.success(f"✅ {status}")
+                            if output_path and os.path.exists(output_path):
+                                h264_path = to_h264(output_path)
+                                if h264_path and os.path.exists(h264_path):
+                                    st.video(h264_path)
+                                    with open(h264_path, 'rb') as f:
+                                        st.download_button(
+                                            "📥 Download",
+                                            data=f.read(),
+                                            file_name="processed_video.mp4",
+                                            mime="video/mp4"
+                                        )
+                        else:
+                            st.error(f"❌ {status}")
+        else:
+            st.info("🚫 Model not loaded")
+    
+    # Bento Card 3: Live Camera
+    with st.container():
+        st.markdown("""
+        <div class="bento-card-header large-card-header">
+            <div class="bento-header">
+                <div>
+                    <div class="bento-title">📸 Live Camera</div>
+                    <div class="bento-subtitle">Real-time detection via webcam</div>
+                </div>
+                <div class="bento-badge">Real-time</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if model_loaded:
+            # Simple camera
+            simple_camera = st.camera_input("📸 Take a photo")
+            if simple_camera is not None:
+                image = Image.open(simple_camera)
                 
-                # Display batch results
-                if results:
-                    import pandas as pd
-                    df = pd.DataFrame(results)
-                    st.subheader("📈 Batch Analysis Results")
-                    st.dataframe(df)
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.image(image, caption="Captured", use_container_width=True)
+                
+                with col2:
+                    with st.spinner("Analyzing..."):
+                        result_img, detections = predict_image_interface(
+                            image, conf_threshold, iou_threshold
+                        )
                     
-                    # Summary statistics
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                    with col1:
-                        st.metric("Total Images", len(results))
-                    with col2:
-                        st.metric("⚪ White Rice", df['white_rice'].sum())
-                    with col3:
-                        st.metric("🟡 Thi Rice", df['thi_rice'].sum())
-                    with col4:
-                        st.metric("🟤 Brown Rice", df['brown_rice'].sum())
-                    with col5:
-                        st.metric("⚫ Black Rice", df['black_rice'].sum())
+                    if result_img is not None:
+                        st.image(result_img, caption="Results", use_container_width=True)
+                        st.markdown(create_detection_summary(detections))
+                    else:
+                        st.error("Analysis failed")
+        else:
+            st.info("🚫 Model not loaded")
+    
+    # Bento Card 4: Batch Analysis
+    with st.container():
+        st.markdown("""
+        <div class="bento-card-header large-card-header">
+            <div class="bento-header">
+                <div>
+                    <div class="bento-title">📊 Batch Analysis</div>
+                    <div class="bento-subtitle">Process multiple images at once</div>
+                </div>
+                <div class="bento-badge">Batch</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if model_loaded:
+            uploaded_files = st.file_uploader(
+                "Upload Multiple Images",
+                type=['png', 'jpg', 'jpeg'],
+                accept_multiple_files=True
+            )
+            
+            if uploaded_files:
+                st.write(f"📁 {len(uploaded_files)} files uploaded")
+                
+                if st.button("🔄 Process All", use_container_width=True):
+                    progress_bar = st.progress(0)
+                    results = []
+                    
+                    for i, file in enumerate(uploaded_files):
+                        image = Image.open(file)
+                        result_img, detections = predict_image_interface(
+                            image, conf_threshold, iou_threshold
+                        )
+                        
+                        if result_img is not None:
+                            results.append({
+                                'filename': file.name,
+                                'detections': len(detections),
+                                'white_rice': len([d for d in detections if d['class'] == 'white_rice']),
+                                'thi_rice': len([d for d in detections if d['class'] == 'thi_rice']),
+                                'brown_rice': len([d for d in detections if d['class'] == 'brown_rice']),
+                                'black_rice': len([d for d in detections if d['class'] == 'black_rice'])
+                            })
+                        
+                        progress_bar.progress((i + 1) / len(uploaded_files))
+                    
+                    if results:
+                        import pandas as pd
+                        df = pd.DataFrame(results)
+                        st.dataframe(df, use_container_width=True)
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("⚪ White", df['white_rice'].sum())
+                        with col2:
+                            st.metric("🟡 Thi", df['thi_rice'].sum())
+                        with col3:
+                            st.metric("🟤 Brown", df['brown_rice'].sum())
+                        with col4:
+                            st.metric("⚫ Black", df['black_rice'].sum())
+        else:
+            st.info("🚫 Model not loaded")
+    
+    
+    # Close Bento Grid
+    st.markdown("</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
