@@ -1513,18 +1513,23 @@ class VideoTransformer(VideoProcessorBase):
         img = frame.to_ndarray(format="bgr24")
         
         if self.classifier is not None:
-            # Update thresholds
-            self.classifier.conf_thres = self.conf_threshold
-            self.classifier.iou_thres = self.iou_threshold
-            
-            # Process frame
-            result_img, detections = self.classifier.predict_video_frame(img)
-            
-            # Convert back to BGR for video output
-            if result_img is not None:
-                result_bgr = cv2.cvtColor(result_img, cv2.COLOR_RGB2BGR)
-                return av.VideoFrame.from_ndarray(result_bgr, format="bgr24")
+            try:
+                # Update thresholds
+                self.classifier.conf_thres = self.conf_threshold
+                self.classifier.iou_thres = self.iou_threshold
+                
+                # Process frame
+                result_img, detections = self.classifier.predict_video_frame(img)
+                
+                # Convert back to BGR for video output
+                if result_img is not None:
+                    result_bgr = cv2.cvtColor(result_img, cv2.COLOR_RGB2BGR)
+                    return av.VideoFrame.from_ndarray(result_bgr, format="bgr24")
+            except Exception as e:
+                print(f"[ERROR] WebRTC recv: {e}")
+                # Return original frame on error
         
+        # Return original frame if no classifier or error
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 def process_video_interface(video_file, conf_threshold, iou_threshold, progress_placeholder=None, status_placeholder=None):
@@ -1916,6 +1921,17 @@ def main():
             
             # WebRTC streamer  
             video_transformer = VideoTransformer()
+            
+            # Ensure classifier is loaded for WebRTC
+            global classifier
+            if classifier is None:
+                classifier_obj, status = load_classifier()
+                if classifier_obj is not None:
+                    classifier = classifier_obj
+                    st.success(f"✅ Model loaded for WebRTC: {status}")
+                else:
+                    st.error(f"❌ Failed to load model for WebRTC: {status}")
+            
             if classifier is not None:
                 video_transformer.set_classifier(classifier, camera_conf, camera_iou)
             
