@@ -16,7 +16,7 @@ import cv2
 import torch
 import time
 import threading
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
 import av
 import subprocess
 import json
@@ -1906,8 +1906,42 @@ def main():
         """, unsafe_allow_html=True)
         
         if model_loaded:
-            # Simple camera
-            simple_camera = st.camera_input("📸 Take a photo")
+            # Camera settings
+            st.subheader("⚙️ Camera Settings")
+            col1, col2 = st.columns(2)
+            with col1:
+                camera_conf = st.slider("Camera Confidence", 0.1, 1.0, conf_threshold, 0.05, key="camera_conf")
+            with col2:
+                camera_iou = st.slider("Camera IoU", 0.1, 1.0, iou_threshold, 0.05, key="camera_iou")
+            
+            # WebRTC streamer  
+            video_transformer = VideoTransformer()
+            if classifier is not None:
+                video_transformer.set_classifier(classifier, camera_conf, camera_iou)
+            
+            st.info("🎥 Live camera detection with YOLOv7")
+            webrtc_ctx = webrtc_streamer(
+                key="rice-detection",
+                video_processor_factory=lambda: video_transformer,
+                rtc_configuration=RTCConfiguration(
+                    ice_servers=[{"urls": ["stun:stun.l.google.com:19302"]}]
+                ),
+                media_stream_constraints={"video": True, "audio": False},
+                async_processing=True,
+            )
+            
+            st.markdown("""
+            **📱 How to use Live Camera:**
+            1. Click "START" to begin camera detection
+            2. Allow browser camera access when prompted
+            3. Position rice grains in front of camera
+            4. Adjust confidence/IoU thresholds as needed
+            5. Click "STOP" when finished
+            """)
+            
+            # Fallback simple camera
+            st.subheader("📷 Alternative: Photo Capture")
+            simple_camera = st.camera_input("📸 Take a photo (if WebRTC doesn't work)")
             if simple_camera is not None:
                 image = Image.open(simple_camera)
                 
