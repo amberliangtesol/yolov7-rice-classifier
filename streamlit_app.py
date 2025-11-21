@@ -650,11 +650,11 @@ st.markdown("""
     .e1mlolmg0,
     .en45cdb5 {
         background: white !important;
-        margin: 1rem 0 0 0 !important;
+        margin: 0 !important;
+        border-radius: 0 0 12px 12px !important;
         padding: 1.5rem !important;
         border: none !important;
         border-bottom: none !important;
-        border-radius: 20px !important;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
         outline: none !important;
     }
@@ -883,6 +883,35 @@ st.markdown("""
         width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+    }
+    
+    /* Image Display Controls - Fix oversized images */
+    [data-testid="stImage"] {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    /* Limit image height to prevent layout breaking */
+    [data-testid="stImage"] > img {
+        max-height: 400px !important;
+        width: auto !important;
+        object-fit: contain !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* For result images in columns, make them fit better */
+    .stColumn [data-testid="stImage"] > img {
+        max-height: 350px !important;
+        max-width: 100% !important;
+    }
+    
+    /* Ensure image containers don't exceed their bounds */
+    .stColumn > div > div > [data-testid="stImage"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
     }
     
     /* Custom scrollbar */
