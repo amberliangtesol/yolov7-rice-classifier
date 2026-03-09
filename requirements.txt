@@ -1,8 +1,8 @@
 # Streamlit Cloud compatible requirements
 streamlit
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.2+cpu
-torchvision==0.16.2+cpu
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
 opencv-python-headless
 numpy<2.0
 Pillow
